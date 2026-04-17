@@ -8,6 +8,7 @@ import { OutcomeCard } from "./OutcomeCards";
 import { ScenarioTabs } from "./ScenarioTabs";
 import { ObligationChip } from "./ObligationChip";
 import type { Decision, ClarificationSpec } from "@/types/decision";
+import { TTSPlayer } from "@/lib/tts/player";
 
 // ---------------------------------------------------------------------------
 // Input + message state
@@ -35,8 +36,10 @@ export function ChatPanel() {
   const messagesEndRef            = useRef<HTMLDivElement>(null);
   const inputRef                  = useRef<HTMLTextAreaElement>(null);
   const abortRef                  = useRef<AbortController | null>(null);
+  const ttsPlayerRef              = useRef<TTSPlayer | null>(null);
 
   const anthropicApiKey     = useStore((s) => s.anthropicApiKey);
+  const cartesiaApiKey      = useStore((s) => s.cartesiaApiKey);
   const threshold           = useStore((s) => s.threshold);
   const open_obligations    = useStore((s) => s.open_obligations);
   const idempotencyHashes   = useStore((s) => s.idempotencyHashes);
@@ -115,9 +118,20 @@ export function ChatPanel() {
         throw new Error(`API error ${res.status}`);
       }
 
-      // Initialise client trace bus for this run
       let runId = "";
       let tokenAccumulator = "";
+      let turnDecisions: Decision[] = [];
+      let turnActions: any[] = [];
+      let turnClarifications: ClarificationSpec[] = [];
+      
+      // M9 TTS state
+      let ttsMode: "pending" | "none" | "clarify" | "first_sentence" | "full" = "pending";
+      let sentenceBuffer = "";
+      let sentencesSpoken = 0;
+
+      if (cartesiaApiKey) {
+        ttsPlayerRef.current = new TTSPlayer(cartesiaApiKey);
+      }
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
@@ -147,28 +161,58 @@ export function ChatPanel() {
               new CustomEvent("alfred:trace", { detail: event })
             );
 
-            // Accumulate response_draft tokens for chat display
-            if (event.kind === "render.token") {
-              const p = event.payload as { token?: string };
-              if (p.token) {
-                tokenAccumulator += p.token;
-                setDraft(tokenAccumulator);
-              }
-            }
-            // M6 State updates from pipeline traces
             if (event.kind === "reason.complete") {
-              const p = event.payload as { output?: { new_obligations?: any[]; obligation_resolutions?: string[] } };
+              const p = event.payload as { output?: { new_obligations?: any[]; obligation_resolutions?: string[]; clarification_specs?: ClarificationSpec[] } };
               if (p.output?.new_obligations?.length) {
                 addObligations(p.output.new_obligations, event.run_id);
               }
               if (p.output?.obligation_resolutions?.length) {
                 resolveObligations(p.output.obligation_resolutions, event.run_id);
               }
+              if (p.output?.clarification_specs?.length) turnClarifications = p.output.clarification_specs;
             }
             if (event.kind === "act.completed") {
-              const p = event.payload as { decision?: any; hash?: string };
-              if (p.decision) addActionHistory(p.decision);
+              const p = event.payload as { decision?: any; hash?: string; action?: any };
+              if (p.decision) {
+                addActionHistory(p.decision);
+                turnDecisions.push(p.decision);
+              }
               if (p.hash) addIdempotencyHash(p.hash);
+              if (p.action) turnActions.push(p.action);
+            }
+
+            // Accumulate response_draft tokens for chat display
+            if (event.kind === "render.token") {
+              // Resolve TTS Mode strictly upon reaching the P5 render phase securely
+              if (ttsMode === "pending") {
+                const verdicts = turnDecisions.map(d => d.verdict);
+                if (verdicts.includes("CLARIFY") || turnClarifications.length > 0) ttsMode = "clarify";
+                else if (verdicts.includes("REFUSE")) ttsMode = "full";
+                else if (verdicts.includes("NOTIFY") || verdicts.includes("CONFIRM")) ttsMode = "first_sentence";
+                else ttsMode = "none";
+
+                if (ttsMode === "clarify") {
+                  ttsPlayerRef.current?.enqueueSentence("I need a quick clarification.");
+                }
+              }
+
+              const p = event.payload as { token?: string };
+              if (p.token) {
+                tokenAccumulator += p.token;
+                setDraft(tokenAccumulator);
+
+                // Sentence buffering map for Cartesia
+                if (ttsMode === "full" || ttsMode === "first_sentence") {
+                  sentenceBuffer += p.token;
+                  if (/[.?!]\s*$/.test(sentenceBuffer)) {
+                    if (ttsMode === "full" || sentencesSpoken === 0) {
+                      ttsPlayerRef.current?.enqueueSentence(sentenceBuffer);
+                      sentencesSpoken++;
+                    }
+                    sentenceBuffer = ""; 
+                  }
+                }
+              }
             }
           } catch {
             // Malformed SSE frame — skip
@@ -176,11 +220,23 @@ export function ChatPanel() {
         }
       }
 
+      // Flush final TTS buffers cleanly natively post loop natively 
+      if (sentenceBuffer.trim().length > 0 && (ttsMode === "full" || (ttsMode === "first_sentence" && sentencesSpoken === 0))) {
+        ttsPlayerRef.current?.enqueueSentence(sentenceBuffer);
+      }
+
       // Commit the final response
-      if (tokenAccumulator) {
+      if (tokenAccumulator || turnDecisions.length > 0 || turnClarifications.length > 0) {
         setMessages((prev) => [
           ...prev,
-          { id: crypto.randomUUID(), role: "assistant", content: tokenAccumulator },
+          { 
+            id: crypto.randomUUID(), 
+            role: "assistant", 
+            content: tokenAccumulator,
+            decisions: turnDecisions,
+            actions: turnActions,
+            clarifications: turnClarifications
+          },
         ]);
       }
       setDraft("");
@@ -216,6 +272,7 @@ export function ChatPanel() {
 
   const cancel = useCallback(() => {
     abortRef.current?.abort();
+    ttsPlayerRef.current?.abort();
   }, []);
 
   // ---------------------------------------------------------------------------
