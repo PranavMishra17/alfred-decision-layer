@@ -193,5 +193,47 @@ notes:
 
 commit (M2) builds the foundational data layer and execution surface: all core types are now defined, decision configuration is centralized, and a registry-based tool system (with mocks) is in place. The system is now structurally ready for decision computation (M4), LLM integration (M3), and state wiring (M6).
 
-### v1.0.3 | feat(M3): LLM integration + trace bus | 2026-04-18
+### v1.0.3 | feat(M3): implement decision core (signals, risk, policy + injection scan)
+
+- Add injection detection (regex patterns, severity levels, scan utilities)
+- Implement signal extraction (intent/entity/action/confidence helpers)
+- Add risk scoring (with optional injection medium bump)
+- Implement policy gate (decide() with all 5 rules + threshold logic)
+- Extend decision types (InjectionFlag, InjectionSeverity, DecisionContext)
+- Update config with POLICY block + blast radius increment
+
+notes:
+- Threshold delta uses config constant (CONFIRM_DELTA) vs inline value
+- riskScore kept pure; injection bump passed explicitly from policy layer
+- Injection scan integrated as pre-decision safety signal
+- Idempotency + SILENT_DUPE supported at type/policy level
+
+known gaps:
+- Full pipeline (LLM + fallback + orchestration) deferred to M5
+- Scenario hydration (P1 context) not yet wired → may affect edge classifications
+- Failure-injection paths depend on upcoming LLM infra
+
+This commit (M4) introduces the deterministic decision engine. The system can now extract signals, compute risk, detect prompt injections, and apply the full policy gate to produce a verdict (ALLOW / CONFIRM / BLOCK / NOTIFY / SILENT_DUPE) — entirely code-driven, without LLM dependency.
+
+Net effect: the core reasoning backbone is now in place. Next step (M5) plugs in the LLM layer + pipeline to augment/override this logic where needed.
+
+### v1.0.4 | feat(M3+M5): Trace bus + LLM pipeline & UI integration
+
+- Add in-process event `TraceBus` with SSE compatibility (M3)
+- Wire `MindPanel` to consume TraceEvents and render reasoning phases/outcomes natively (M3)
+- Implement `reason.ts` for P2 streaming Sonnet model with Zod schemas and automatic retry-once (M5)
+- Provide safe-mode Haiku fallback for strict constraint output (M5)
+- Orchestrate entire P0-P4 async generator pipeline via `lib/decision/pipeline.ts` (M5)
+- Expose `/api/decide` edge route that forwards pipeline traces to frontend (M5)
+- Wire `ChatPanel` input directly to SSE API, handling text chunks and pipeline metadata (M5)
+
+notes:
+- `ChatPanel` and `MindPanel` interact solely via the `TraceBus` to maintain the decoupled design.
+- We opted correctly into edge compatibility (`NextRequest`, `ReadableStream`) to preserve Vercel constraints.
+- Try/catch enforced meticulously with strict `REFUSE` and `CLARIFY` safety fallbacks.
+
+known gaps:
+- Zustand store state (`PendingObligation`) mutation logic requires M6.
+- TTS/Voice capability is deferred (Cartesia client/route).
+- Idempotency checks fully work but local storage persistence remains out of scope for now.
 
