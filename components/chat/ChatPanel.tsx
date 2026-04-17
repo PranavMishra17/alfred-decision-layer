@@ -32,10 +32,15 @@ export function ChatPanel() {
   const inputRef                  = useRef<HTMLTextAreaElement>(null);
   const abortRef                  = useRef<AbortController | null>(null);
 
-  const { anthropicApiKey, threshold } = useStore((s) => ({
-    anthropicApiKey: s.anthropicApiKey,
-    threshold:    s.threshold,
-  }));
+  const anthropicApiKey     = useStore((s) => s.anthropicApiKey);
+  const threshold           = useStore((s) => s.threshold);
+  const open_obligations    = useStore((s) => s.open_obligations);
+  const idempotencyHashes   = useStore((s) => s.idempotencyHashes);
+  const actionHistory       = useStore((s) => s.actionHistory);
+  const addObligations      = useStore((s) => s.addObligations);
+  const resolveObligations  = useStore((s) => s.resolveObligations);
+  const addActionHistory    = useStore((s) => s.addActionHistory);
+  const addIdempotencyHash  = useStore((s) => s.addIdempotencyHash);
 
   // ---------------------------------------------------------------------------
   // Send turn → /api/decide SSE
@@ -78,9 +83,9 @@ export function ChatPanel() {
           api_key:              anthropicApiKey,
           threshold,
           conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
-          open_obligations:     [],
-          idempotency_hashes:   [],
-          action_history:       [],
+          open_obligations:     open_obligations,
+          idempotency_hashes:   Array.from(idempotencyHashes),
+          action_history:       actionHistory,
         }),
       });
 
@@ -127,6 +132,21 @@ export function ChatPanel() {
                 tokenAccumulator += p.token;
                 setDraft(tokenAccumulator);
               }
+            }
+            // M6 State updates from pipeline traces
+            if (event.kind === "reason.complete") {
+              const p = event.payload as { output?: { new_obligations?: any[]; obligation_resolutions?: string[] } };
+              if (p.output?.new_obligations?.length) {
+                addObligations(p.output.new_obligations, event.run_id);
+              }
+              if (p.output?.obligation_resolutions?.length) {
+                resolveObligations(p.output.obligation_resolutions, event.run_id);
+              }
+            }
+            if (event.kind === "act.completed") {
+              const p = event.payload as { decision?: any; hash?: string };
+              if (p.decision) addActionHistory(p.decision);
+              if (p.hash) addIdempotencyHash(p.hash);
             }
           } catch {
             // Malformed SSE frame — skip

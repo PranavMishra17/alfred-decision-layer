@@ -195,6 +195,9 @@ export async function* runDecisionPipeline(
     llmOutput = { ...llmOutput, actions: [] };
   }
 
+  bus.emit("P2", "reason.complete", { output: llmOutput });
+  yield* flush();
+
   // ===========================================================================
   // P3 — Decide (per action)
   // ===========================================================================
@@ -269,7 +272,15 @@ export async function* runDecisionPipeline(
       }
     }
 
-    bus.emit("P4", "act.completed", { action_id: decision.action_id });
+    bus.emit("P4", "act.completed", {
+      action_id: decision.action_id,
+      decision,
+      hash: llmOutput.actions.find(
+        (a) => `${a.tool}:${JSON.stringify(a.params)}` === decision.action_id.split(":").slice(1).join(":")
+      ) ? `${decision.action_id.split(":")[1]}:${JSON.stringify(llmOutput.actions.find(
+        (a) => `${a.tool}:${JSON.stringify(a.params)}` === decision.action_id.split(":").slice(1).join(":")
+      )?.params)}` : undefined
+    });
     yield* flush();
   }
 

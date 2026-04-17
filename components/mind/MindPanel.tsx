@@ -47,7 +47,6 @@ const PHASE_LABELS: Record<Phase, string> = {
  */
 export function MindPanel() {
   const [runs,         setRuns]         = useState<RunData[]>([]);
-  const [runCount,     setRunCount]     = useState(0);
   const [toolsOpen,    setToolsOpen]    = useState(false);
   const runsEndRef = useRef<HTMLDivElement>(null);
 
@@ -70,10 +69,6 @@ export function MindPanel() {
   // Auto-scroll runs area to bottom when a new run is added
   useEffect(() => {
     runsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [runs.length]);
-
-  useEffect(() => {
-    setRunCount(runs.length);
   }, [runs.length]);
 
   return (
@@ -104,7 +99,7 @@ export function MindPanel() {
             className="font-mono text-xs"
             style={{ color: "var(--text-muted)" }}
           >
-            {runCount} {runCount === 1 ? "run" : "runs"}
+            {runs.length} {runs.length === 1 ? "run" : "runs"}
           </span>
 
           <button

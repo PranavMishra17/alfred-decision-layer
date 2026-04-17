@@ -12,6 +12,9 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { createObligationSlice }      from "@/lib/obligations/store";
+import type { ObligationSlice }       from "@/lib/obligations/store";
+import type { Decision }              from "@/types/decision";
 
 // ---------------------------------------------------------------------------
 // Settings slice (persisted — survives page reloads)
@@ -20,9 +23,7 @@ import { persist, createJSONStorage } from "zustand/middleware";
 interface SettingsState {
   anthropicApiKey: string;
   cartesiaApiKey:  string;
-  /** Single threshold slider: 0.1..0.9, default 0.5 */
   threshold:       number;
-  /** One-shot failure injection flags — consumed on next P2 call */
   injectTimeout:          boolean;
   injectMalformedOutput:  boolean;
   injectMissingContext:   boolean;
@@ -35,7 +36,6 @@ interface SettingsActions {
   setInjectTimeout:         (v: boolean)     => void;
   setInjectMalformedOutput: (v: boolean)     => void;
   setInjectMissingContext:  (v: boolean)     => void;
-  clearAllState:            ()               => void;
 }
 
 type SettingsSlice = SettingsState & SettingsActions;
@@ -50,45 +50,75 @@ const defaultSettings: SettingsState = {
 };
 
 // ---------------------------------------------------------------------------
+// M6 Slices: History & Idempotency
+// ---------------------------------------------------------------------------
+
+interface M6State {
+  actionHistory:        Decision[];
+  idempotencyHashes:    string[];
+}
+
+interface M6Actions {
+  addActionHistory:     (d: Decision) => void;
+  addIdempotencyHash:   (hash: string) => void;
+  clearAllState:        () => void;
+}
+
+type M6Slice = M6State & M6Actions;
+
+// ---------------------------------------------------------------------------
 // Root store
 // ---------------------------------------------------------------------------
 
-type RootStore = SettingsSlice;
+type RootStore = SettingsSlice & ObligationSlice & M6Slice;
 
 export const useStore = create<RootStore>()(
   persist(
-    (set) => ({
+    (set, get, api) => ({
       ...defaultSettings,
+      
+      // Settings slice
+      setAnthropicApiKey: (key) => set({ anthropicApiKey: key }),
+      setCartesiaApiKey:  (key) => set({ cartesiaApiKey: key }),
+      setThreshold:       (value) => set({ threshold: Math.min(0.9, Math.max(0.1, value)) }),
+      setInjectTimeout:         (v) => set({ injectTimeout: v }),
+      setInjectMalformedOutput: (v) => set({ injectMalformedOutput: v }),
+      setInjectMissingContext:  (v) => set({ injectMissingContext: v }),
 
-      setAnthropicApiKey: (key) =>
-        set({ anthropicApiKey: key }),
+      // M6 slices
+      actionHistory: [],
+      idempotencyHashes: [],
+      
+      addActionHistory: (d) =>
+        set((state) => ({ actionHistory: [...state.actionHistory, d] })),
+        
+      addIdempotencyHash: (hash) =>
+        set((state) => ({ idempotencyHashes: [...state.idempotencyHashes, hash] })),
 
-      setCartesiaApiKey: (key) =>
-        set({ cartesiaApiKey: key }),
+      // Obligations slice
+      ...createObligationSlice(set, get, api),
 
-      setThreshold: (value) =>
-        set({ threshold: Math.min(0.9, Math.max(0.1, value)) }),
-
-      setInjectTimeout: (v) =>
-        set({ injectTimeout: v }),
-
-      setInjectMalformedOutput: (v) =>
-        set({ injectMalformedOutput: v }),
-
-      setInjectMissingContext: (v) =>
-        set({ injectMissingContext: v }),
-
-      clearAllState: () =>
-        set({ ...defaultSettings }),
+      // Clear all state (Settings remains untouched except if you want, but default clears conversation)
+      clearAllState: () => {
+        set({
+          actionHistory: [],
+          idempotencyHashes: [],
+          open_obligations: [],
+        });
+      },
     }),
     {
       name:    "alfred-settings",
       storage: createJSONStorage(() => localStorage),
       // Only persist settings; conversation state is intentionally ephemeral
+      // Wait, M6 states "persistent state (obligations + idempotency) to make decisions stateful and consistent across sessions."
       partialize: (state) => ({
-        anthropicApiKey:  state.anthropicApiKey,
-        cartesiaApiKey:   state.cartesiaApiKey,
-        threshold:        state.threshold,
+        anthropicApiKey:    state.anthropicApiKey,
+        cartesiaApiKey:     state.cartesiaApiKey,
+        threshold:          state.threshold,
+        open_obligations:   state.open_obligations,
+        idempotencyHashes:  state.idempotencyHashes,
+        actionHistory:      state.actionHistory,
       }),
     }
   )

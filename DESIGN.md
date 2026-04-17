@@ -237,3 +237,59 @@ known gaps:
 - TTS/Voice capability is deferred (Cartesia client/route).
 - Idempotency checks fully work but local storage persistence remains out of scope for now.
 
+
+### v1.0.5 | feat(M3+M5): add trace bus, LLM pipeline, and SSE orchestration
+
+- Implement typed trace bus (event emitter + shared types)
+- Add Zod schemas for structured LLM outputs (P2 contract)
+- Create system + safe-mode prompts (strict fallback constraints)
+- Implement LLM client (streaming, retry-once, integrated fallback)
+- Build decision pipeline/orchestrator (P0–P4 with trace emission)
+- Add /api/decide SSE route (Edge streaming to UI)
+- Integrate ChatPanel with streaming API + trace dispatch
+- Update MindPanel to subscribe/render trace phases (decoupled)
+
+notes:
+- Safe-mode fallback colocated in reason.ts for single LLM abstraction surface
+- Zod record signature adjusted for TS compatibility
+- Explicit null/undefined guards for JSX type safety
+- Pipeline emits structured traces for UI + debugging
+
+known gaps:
+- Obligation store + idempotency persistence not yet wired (M6)
+- Some advanced failure paths depend on downstream state handling
+- UI reflects traces but not yet fully state-driven
+
+This commit (M3+M5) wires the system into a live, streaming architecture. A trace bus enables step-by-step visibility, the LLM layer (with schema validation and safe fallback) augments reasoning, and the pipeline orchestrates all phases (P0–P4). The SSE API streams decisions + traces to the UI, with ChatPanel triggering runs and MindPanel rendering them in real time.
+
+Net effect: the system is now end-to-end functional — from user input → orchestrated reasoning → streamed decision + trace visualization. Next step (M6) introduces persistent state (obligations + idempotency) to make decisions stateful and consistent across sessions.
+
+
+### v1.0.6 | feat(M6): add obligation store, idempotency, and persistence
+
+- Integrate Zustand slices (obligations + M6 state) with persistence
+- Add obligation store module + pure resolver logic
+- Wire ChatPanel to extract state, map fetch payloads, and handle SSE traces
+- Update pipeline to emit act.complete + reason.complete with hashes/outputs
+- Track idempotency via hash set (serialized/deserialized across boundary)
+
+notes:
+- Idempotency Set serialized via Array.from() for Zustand compatibility
+- SSE listeners intercept reason/act traces to update obligations in real time
+- State now persists across sessions (local storage-backed)
+
+known gaps:
+- Obligations UI (drawer/chips) not yet implemented (M7)
+- Visualization layer intentionally deferred; state is fully wired underneath
+
+context (for agent):
+
+This commit (M6) introduces persistent state into the system. Obligations are now created, resolved, and stored across sessions, and idempotency prevents duplicate actions via hash tracking. The pipeline, UI, and SSE layer are now tightly coupled through real-time trace interception.
+
+Net effect: the system is no longer just reactive — it is stateful and consistent over time. Next step (M7) exposes this state through UI (obligations drawer, outcome rendering, multi-intent handling).
+
+
+### v1.0.7 | feat(M7): obligations UI, multi-intent rendering, and outcome display
+
+
+
