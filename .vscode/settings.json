@@ -1,9 +1,4 @@
 {
   "css.lint.unknownAtRules": "ignore",
-  "css.validate": false,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "tailwindCSS.includeLanguages": {
-    "typescript": "javascript",
-    "typescriptreact": "javascript"
-  }
+  "css.validate": false
 }

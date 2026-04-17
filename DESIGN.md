@@ -157,3 +157,18 @@ If a task appears to require any of the above, stop and raise a BUG block with s
 DESIGN.md v1. Revise only when the canonical docs materially change or when a new operating rule is adopted across the team. Bump version on every change.
 
 - Important bugs, resolutions - need to be documented. Keep the versioning system append only.
+
+### v1.0.1 | feat(M1): scaffold core app structure + UI shells | 2026-04-18
+
+- Initialize Next.js + Tailwind scaffold (merged from temp dir)
+- Add global styles, theme tokens (Obsidian + Cream palette)
+- Implement app layout and landing page (per UI-UX spec)
+- Scaffold chat + mind panels (60/40 split, structural shells only)
+- Add shared components (DecisionBadge, layout shells)
+- Set up Zustand store + decision types (threshold clamp logic)
+- Wire base routing (/, /chat)
+
+notes:
+- Avatar replaced with typographic/geometric mark
+- Minor inline styles in landing page (to be moved in M2)
+- Interaction logic deferred (M3–M8 per plan)

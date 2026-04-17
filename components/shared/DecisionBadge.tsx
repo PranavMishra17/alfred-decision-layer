@@ -7,11 +7,12 @@ interface DecisionBadgeProps {
 }
 
 const VERDICT_LABELS: Record<Verdict, string> = {
-  SILENT:  "SILENT",
-  NOTIFY:  "NOTIFY",
-  CONFIRM: "CONFIRM",
-  CLARIFY: "CLARIFY",
-  REFUSE:  "REFUSE",
+  SILENT:      "SILENT",
+  NOTIFY:      "NOTIFY",
+  CONFIRM:     "CONFIRM",
+  CLARIFY:     "CLARIFY",
+  REFUSE:      "REFUSE",
+  SILENT_DUPE: "DONE",
 };
 
 /**
