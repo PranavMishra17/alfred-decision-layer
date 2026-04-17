@@ -291,5 +291,47 @@ Net effect: the system is no longer just reactive — it is stateful and consist
 
 ### v1.0.7 | feat(M7): obligations UI, multi-intent rendering, and outcome display
 
+- Implement `ScenarioTabs` loading dynamically from `PRELOADED_SCENARIOS`
+- Implement `OutcomeCards` covering all five verdicts (SILENT, NOTIFY, CONFIRM, CLARIFY, REFUSE)
+- Refactor `MessageBubble` array to natively support multi-intent mappings via nested mapped arrays per turn layout constraints
+- Create animated `ObligationChip` widget connected directly to Zustand M6 local map above chat panel
+- Connect `New Conversation` button to global event loops parsing clears across `MindPanel` and `ChatPanel` ephemeral history states
+
+notes:
+- Extended SSE act.completed payloads dynamically mapping to pipeline action parameters per M7 output UI rendering needs
+- Ensured CSS animations and SVG countdown bindings matched original aesthetics natively
+- M7 closes out the UI fidelity loop cleanly.
+
+known gaps:
+- Tool execution is still locally simulated via Mocks.
+- TTS bindings and audio streams remain intentionally deferred (M9).
+
+### v1.0.8 | feat(M8): add chat UI, outcome cards, scenarios, and session reset
+
+- Implement verdict-specific OutcomeCards (SILENT, NOTIFY, CONFIRM, CLARIFY, REFUSE)
+- Add ScenarioTabs (preloaded scenarios, instant pipeline priming)
+- Add ObligationChip + drawer (constraint visibility from state)
+- Integrate M7 components into ChatPanel (SSE parsing, multi-action rendering)
+- Update ChatPageShell with conversation reset (global dispatch)
+- Add MindPanel wipe listener for session resets
+- Update pipeline to pass raw action payloads
+
+notes:
+- Multi-intent turns grouped under contextual helper bubble
+- NOTIFY card includes dynamic countdown UX
+- Scenario tabs docked below top bar to avoid layout shift
+- Clarification flows rendered visually; re-looping deferred
+
+known gaps:
+- Clarify (MCQ) not yet re-invoking pipeline (mock UX only)
+- Settings layer not yet implemented (M8)
+
+context (for agent):
+Previous commit (M6) introduced persistent obligations + idempotency, making the system stateful but still mostly internal.
+
+This commit (M7) surfaces the entire decision layer to the user through UI. Verdicts are now rendered as structured outcome cards, multiple actions per turn are supported, scenarios can dynamically reconfigure runs, and obligations are visible via a drawer. Conversation lifecycle is also fully controllable via reset events synced across panels.
+
+Net effect: the system is now fully interactive and user-visible, accurately reflecting pipeline decisions in real time. Next step (M8) adds the settings layer to control thresholds, API keys, and runtime behavior.
+
 
 

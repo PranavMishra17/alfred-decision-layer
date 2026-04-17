@@ -272,14 +272,14 @@ export async function* runDecisionPipeline(
       }
     }
 
+    const rawAction = llmOutput.actions.find(
+      (a) => `${a.tool}:${JSON.stringify(a.params)}` === decision.action_id.split(":").slice(1).join(":")
+    );
     bus.emit("P4", "act.completed", {
       action_id: decision.action_id,
       decision,
-      hash: llmOutput.actions.find(
-        (a) => `${a.tool}:${JSON.stringify(a.params)}` === decision.action_id.split(":").slice(1).join(":")
-      ) ? `${decision.action_id.split(":")[1]}:${JSON.stringify(llmOutput.actions.find(
-        (a) => `${a.tool}:${JSON.stringify(a.params)}` === decision.action_id.split(":").slice(1).join(":")
-      )?.params)}` : undefined
+      action: rawAction,
+      hash: rawAction ? `${decision.action_id.split(":")[1]}:${JSON.stringify(rawAction.params)}` : undefined
     });
     yield* flush();
   }

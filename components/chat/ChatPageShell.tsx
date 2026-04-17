@@ -11,7 +11,16 @@ import { MindPanel }    from "@/components/mind/MindPanel";
  * Right 40 % — Agent Mind Panel
  * Source: UI-UX-DESIGN.md §3.2
  */
+import { useStore }                from "@/state/store";
+
 export function ChatPageShell() {
+  const clearAllState = useStore((s) => s.clearAllState);
+
+  const handleNewConversation = () => {
+    clearAllState();
+    window.dispatchEvent(new CustomEvent("alfred:clear-runs"));
+  };
+
   return (
     <div
       className="flex flex-col h-dvh overflow-hidden"
@@ -31,7 +40,7 @@ export function ChatPageShell() {
         <Link
           href="/"
           id="topbar-home-link"
-          className="flex items-center gap-2 transition-opacity hover:opacity-80"
+          className="flex items-center gap-2 transition-opacity hover:opacity-80 w-1/3"
           aria-label="alfred_ home"
         >
           <AlfredAvatar state="idle" size={24} />
@@ -43,16 +52,30 @@ export function ChatPageShell() {
           </span>
         </Link>
 
-        {/* Center — placeholder for scenario strip toggle (M7) */}
-        <span
-          className="font-mono text-xs"
-          style={{ color: "var(--text-muted)" }}
-        >
-          Decision Layer
-        </span>
+        {/* Center */}
+        <div className="flex items-center justify-center w-1/3">
+          <span
+            className="font-mono text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
+            Decision Layer
+          </span>
+        </div>
 
-        {/* Right actions — placeholder for Settings (M8) */}
-        <div className="flex items-center gap-2">
+        {/* Right actions */}
+        <div className="flex items-center justify-end gap-2 w-1/3">
+          <button
+            onClick={handleNewConversation}
+            className="font-mono text-xs px-3 py-1.5 rounded border transition-colors duration-150"
+            style={{
+              color:           "var(--text-secondary)",
+              borderColor:     "var(--border-subtle)",
+              backgroundColor: "transparent",
+            }}
+            aria-label="New conversation"
+          >
+            New Conversation
+          </button>
           <button
             id="topbar-settings-btn"
             className="font-mono text-xs px-3 py-1.5 rounded border transition-colors duration-150"

@@ -1,9 +1,13 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { initClientBus }           from "@/lib/trace/bus";
 import type { TraceEvent }         from "@/types/trace";
 import { useStore }                from "@/state/store";
+import { OutcomeCard } from "./OutcomeCards";
+import { ScenarioTabs } from "./ScenarioTabs";
+import { ObligationChip } from "./ObligationChip";
+import type { Decision, ClarificationSpec } from "@/types/decision";
 
 // ---------------------------------------------------------------------------
 // Input + message state

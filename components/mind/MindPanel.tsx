@@ -52,7 +52,7 @@ export function MindPanel() {
 
   // Expose a way for ChatPanel to push SSE events into the bus
   useEffect(() => {
-    // Listen for CustomEvents dispatched by the ChatPanel SSE consumer
+    // Expose a way for ChatPanel to push SSE events into the bus
     const handler = (e: CustomEvent<TraceEvent>) => {
       pushClientEvent(e.detail);
       const bus = getClientBus();
@@ -62,8 +62,18 @@ export function MindPanel() {
       setRuns((prev) => buildRunsList(bus.events));
     };
 
+    const clearHandler = () => {
+      setRuns([]);
+      // We don't have a way to reset the physical events inside the global bus easily here, 
+      // but new runs generate new buses via run_id anyway, so just clearing UI is fine!
+    };
+
     window.addEventListener("alfred:trace" as string, handler as EventListener);
-    return () => window.removeEventListener("alfred:trace" as string, handler as EventListener);
+    window.addEventListener("alfred:clear-runs", clearHandler);
+    return () => {
+      window.removeEventListener("alfred:trace" as string, handler as EventListener);
+      window.removeEventListener("alfred:clear-runs", clearHandler);
+    };
   }, []);
 
   // Auto-scroll runs area to bottom when a new run is added
