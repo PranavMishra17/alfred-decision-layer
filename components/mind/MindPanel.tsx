@@ -198,6 +198,11 @@ function RunCard({ run }: { run: RunData }) {
           {run.verdict && (
             <DecisionBadge verdict={run.verdict} size="sm" />
           )}
+          {Object.values(run.sections).some(s => s?.failed) && (
+            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded border border-[var(--decision-refuse)] text-[var(--decision-refuse)] ml-1">
+              FAILURE HANDLED
+            </span>
+          )}
           {run.done ? null : (
             <span className="font-mono text-xs" style={{ color: "var(--accent-copper)", animation: "caret-blink 1.1s step-end infinite" }}>
               ...
@@ -243,7 +248,11 @@ function PhaseRow({
   section: PhaseSection;
   run:     RunData;
 }) {
-  const [open, setOpen] = useState(phase === "P3");
+  const [open, setOpen] = useState(phase === "P3" || section.failed);
+
+  useEffect(() => {
+    if (section.failed) setOpen(true);
+  }, [section.failed]);
 
   const borderColor = section.failed
     ? "var(--decision-refuse)"

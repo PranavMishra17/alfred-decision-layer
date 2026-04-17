@@ -42,9 +42,15 @@ export function ChatPanel() {
   const idempotencyHashes   = useStore((s) => s.idempotencyHashes);
   const actionHistory       = useStore((s) => s.actionHistory);
   const addObligations      = useStore((s) => s.addObligations);
-  const resolveObligations  = useStore((s) => s.resolveObligations);
-  const addActionHistory    = useStore((s) => s.addActionHistory);
-  const addIdempotencyHash  = useStore((s) => s.addIdempotencyHash);
+  const resolveObligations       = useStore((s) => s.resolveObligations);
+  const addActionHistory         = useStore((s) => s.addActionHistory);
+  const addIdempotencyHash       = useStore((s) => s.addIdempotencyHash);
+  const injectTimeout            = useStore((s) => s.injectTimeout);
+  const injectMalformedOutput    = useStore((s) => s.injectMalformedOutput);
+  const injectMissingContext     = useStore((s) => s.injectMissingContext);
+  const setInjectTimeout         = useStore((s) => s.setInjectTimeout);
+  const setInjectMalformedOutput = useStore((s) => s.setInjectMalformedOutput);
+  const setInjectMissingContext  = useStore((s) => s.setInjectMissingContext);
 
   // ---------------------------------------------------------------------------
   // Send turn → /api/decide SSE
@@ -90,8 +96,20 @@ export function ChatPanel() {
           open_obligations:     open_obligations,
           idempotency_hashes:   Array.from(idempotencyHashes),
           action_history:       actionHistory,
+          inject: {
+            timeout:          injectTimeout,
+            malformed_output: injectMalformedOutput,
+            missing_context:  injectMissingContext,
+          }
         }),
       });
+
+      // Clear one-shot injection flags after successful trigger
+      if (injectTimeout || injectMalformedOutput || injectMissingContext) {
+        setInjectTimeout(false);
+        setInjectMalformedOutput(false);
+        setInjectMissingContext(false);
+      }
 
       if (!res.ok || !res.body) {
         throw new Error(`API error ${res.status}`);

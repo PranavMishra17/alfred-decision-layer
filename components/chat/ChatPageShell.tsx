@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
 import { ChatPanel }    from "@/components/chat/ChatPanel";
 import { MindPanel }    from "@/components/mind/MindPanel";
+import { SettingsSheet } from "@/components/settings/SettingsSheet";
 
 /**
  * Full-viewport chat layout.
@@ -14,6 +16,7 @@ import { MindPanel }    from "@/components/mind/MindPanel";
 import { useStore }                from "@/state/store";
 
 export function ChatPageShell() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const clearAllState = useStore((s) => s.clearAllState);
 
   const handleNewConversation = () => {
@@ -26,6 +29,7 @@ export function ChatPageShell() {
       className="flex flex-col h-dvh overflow-hidden"
       style={{ background: "var(--bg-primary)" }}
     >
+      {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
       {/* ----------------------------------------------------------------
           Top bar
       ----------------------------------------------------------------- */}
@@ -78,6 +82,7 @@ export function ChatPageShell() {
           </button>
           <button
             id="topbar-settings-btn"
+            onClick={() => setSettingsOpen(true)}
             className="font-mono text-xs px-3 py-1.5 rounded border transition-colors duration-150"
             style={{
               color:           "var(--text-secondary)",

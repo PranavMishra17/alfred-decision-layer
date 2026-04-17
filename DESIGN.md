@@ -306,32 +306,23 @@ known gaps:
 - Tool execution is still locally simulated via Mocks.
 - TTS bindings and audio streams remain intentionally deferred (M9).
 
-### v1.0.8 | feat(M8): add chat UI, outcome cards, scenarios, and session reset
 
-- Implement verdict-specific OutcomeCards (SILENT, NOTIFY, CONFIRM, CLARIFY, REFUSE)
-- Add ScenarioTabs (preloaded scenarios, instant pipeline priming)
-- Add ObligationChip + drawer (constraint visibility from state)
-- Integrate M7 components into ChatPanel (SSE parsing, multi-action rendering)
-- Update ChatPageShell with conversation reset (global dispatch)
-- Add MindPanel wipe listener for session resets
-- Update pipeline to pass raw action payloads
+### v1.0.8 | feat(M8): failure injection harness and settings sheet
+
+- Implement `SettingsSheet` for centralized state controls (keys, threshold sliders, injection toggles)
+- Pass one-shot toggles down Edge API payloads into pipeline run loop, clearing locally post-dispatch
+- Enhance `MindPanel` to distinctly isolate failure paths (`FAILURE HANDLED` UI badges, auto-expanding rose borders exclusively overriding standard logic)
+- Wire overarching Shell button mapping
 
 notes:
-- Multi-intent turns grouped under contextual helper bubble
-- NOTIFY card includes dynamic countdown UX
-- Scenario tabs docked below top bar to avoid layout shift
-- Clarification flows rendered visually; re-looping deferred
+- Inject tests enforce hard exits and route to Haiku safe-mode
+- The MindPanel visualizations guarantee robust manual debugging surface mappings out-of-the-box
 
 known gaps:
-- Clarify (MCQ) not yet re-invoking pipeline (mock UX only)
-- Settings layer not yet implemented (M8)
+- Tool executions are mocked
+- Only remaining milestone: M9 (TTS streaming proxy integration)
 
 context (for agent):
-Previous commit (M6) introduced persistent obligations + idempotency, making the system stateful but still mostly internal.
+M8 safely incorporates adversarial tests by enforcing failure injection parameters natively into the decision cycle without code rewrites.
 
-This commit (M7) surfaces the entire decision layer to the user through UI. Verdicts are now rendered as structured outcome cards, multiple actions per turn are supported, scenarios can dynamically reconfigure runs, and obligations are visible via a drawer. Conversation lifecycle is also fully controllable via reset events synced across panels.
-
-Net effect: the system is now fully interactive and user-visible, accurately reflecting pipeline decisions in real time. Next step (M8) adds the settings layer to control thresholds, API keys, and runtime behavior.
-
-
-
+Next step (M9): the Cartesia TTS logic setup.
