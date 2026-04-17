@@ -1,0 +1,156 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* -------------------------------------------------------
+   Design system tokens — Obsidian + Cream
+   Near-black surfaces, soft ivory text, single warm-sand accent.
+   Source: UI-UX-DESIGN.md §2 (palette overridden per user direction)
+-------------------------------------------------------- */
+:root {
+  /* Surfaces — true near-black, no blue cast */
+  --bg-primary:       #0E0E0E;
+  --bg-secondary:     #141414;
+  --bg-tertiary:      #1B1B1B;
+  --bg-chat-surface:  #181818;
+  --bg-input:         #111111;
+
+  /* Text — cream / warm ivory, no cold white */
+  --text-primary:     #EDE8DF;
+  --text-secondary:   #9C9488;
+  --text-muted:       #524D48;
+
+  /* Accent — single warm sand / antique gold */
+  --accent-copper:    #C4A882;
+  --accent-copper-dim:#8A7158;
+  --accent-olive:     #7A8472;
+
+  /* Borders */
+  --border-subtle:    #232323;
+  --border-active:    #C4A88228;
+
+  /* Decision verdicts — muted, distinguishable by hue, never garish */
+  --decision-silent:  #7EA99A;
+  --decision-notify:  #7898B8;
+  --decision-confirm: #C0A462;
+  --decision-clarify: #9887B0;
+  --decision-refuse:  #B07878;
+
+  /* Decision background tints — 10 % opacity */
+  --decision-silent-bg:  #7EA99A1A;
+  --decision-notify-bg:  #7898B81A;
+  --decision-confirm-bg: #C0A4621A;
+  --decision-clarify-bg: #9887B01A;
+  --decision-refuse-bg:  #B078781A;
+
+  /* Typography */
+  --font-mono: 'IBM Plex Mono', 'Fira Code', monospace;
+  --font-sans: 'Inter', system-ui, sans-serif;
+
+  /* Timing */
+  --transition-fast:   150ms ease-out;
+  --transition-normal: 200ms ease-out;
+}
+
+/* -------------------------------------------------------
+   Base resets
+-------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+/* -------------------------------------------------------
+   Scrollbar — thin, warm-toned
+-------------------------------------------------------- */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb  { background: var(--border-subtle); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* -------------------------------------------------------
+   Focus ring
+-------------------------------------------------------- */
+:focus-visible {
+  outline: 1.5px solid var(--accent-copper);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* -------------------------------------------------------
+   Keyframes
+-------------------------------------------------------- */
+
+/* Caret cursor blink — used in avatar mark */
+@keyframes caret-blink {
+  0%, 45%  { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100%     { opacity: 1; }
+}
+
+/* Message slide-up */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Fade-in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Sand glow pulse on CTA */
+@keyframes sand-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #C4A88222; }
+  50%       { box-shadow: 0 0 0 10px #C4A88200; }
+}
+
+/* Page-level hover styles (Server Components can't use event handlers) */
+.cta-link {
+  background-color: var(--accent-copper);
+  color: var(--bg-primary);
+  transition: background-color var(--transition-fast);
+}
+.cta-link:hover {
+  background-color: var(--accent-copper-dim);
+}
+.verdict-row {
+  transition: border-color var(--transition-fast);
+}
+.verdict-row:hover {
+  border-color: var(--border-active);
+}
+
+/* -------------------------------------------------------
+   Utility classes
+-------------------------------------------------------- */
+.animate-slide-up    { animation: slide-up  150ms ease-out forwards; }
+.animate-fade-in     { animation: fade-in   200ms ease-out forwards; }
+.animate-sand-pulse  { animation: sand-pulse 2.4s ease-in-out infinite; }
+
+/* Decision verdict badge classes */
+.verdict-silent  { color: var(--decision-silent);  background: var(--decision-silent-bg);  border-color: var(--decision-silent);  }
+.verdict-notify  { color: var(--decision-notify);  background: var(--decision-notify-bg);  border-color: var(--decision-notify);  }
+.verdict-confirm { color: var(--decision-confirm); background: var(--decision-confirm-bg); border-color: var(--decision-confirm); }
+.verdict-clarify { color: var(--decision-clarify); background: var(--decision-clarify-bg); border-color: var(--decision-clarify); }
+.verdict-refuse  { color: var(--decision-refuse);  background: var(--decision-refuse-bg);  border-color: var(--decision-refuse);  }
