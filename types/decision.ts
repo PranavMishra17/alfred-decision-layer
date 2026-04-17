@@ -96,3 +96,44 @@ export type LLMReasoningOutput = {
   clarification_specs: Omit<ClarificationSpec, "action_id">[];
   response_draft: string;
 };
+
+// ---------------------------------------------------------------------------
+// Security / injection types (produced by P0, consumed by P3)
+// Source: DECISION_LAYER.md §16
+// ---------------------------------------------------------------------------
+
+export type InjectionSeverity = "low" | "medium" | "high";
+
+export type InjectionFlag = {
+  /** Human-readable pattern label (e.g. "instruction_override") */
+  pattern: string;
+  severity: InjectionSeverity;
+  /** The substring that matched */
+  matched_text: string;
+};
+
+// ---------------------------------------------------------------------------
+// Decision context — assembled by P1, consumed by P3
+// Source: DECISION_LAYER.md §8-9
+// ---------------------------------------------------------------------------
+
+import type { ToolDefinition } from "./tool";
+import type { PendingObligation } from "./obligation";
+
+export type DecisionContext = {
+  /** Full tool registry — P3 must be able to look up any tool by name */
+  registry: Record<string, ToolDefinition>;
+  /** Only obligations with status "open" */
+  open_obligations: PendingObligation[];
+  /** Set of action hashes executed in the rolling idempotency window */
+  idempotency: Set<string>;
+  /** User-facing settings from the Zustand store */
+  settings: {
+    threshold: number;   // 0.1..0.9
+  };
+  /** Injection flags produced by P0 parallel scan */
+  injection_flags: InjectionFlag[];
+  /** Recent decisions, newest first — available to P3 for context */
+  action_history: Decision[];
+};
+

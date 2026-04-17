@@ -115,3 +115,38 @@ export const SECURITY = {
     low:    0.1,
   },
 } as const;
+
+// ---------------------------------------------------------------------------
+// Policy rules
+// ---------------------------------------------------------------------------
+
+export const POLICY = {
+  /**
+   * Email domain considered internal — external_recipient flag fires when a
+   * resolved email does NOT end with this domain.
+   * Value is a config constant, not hardcoded in signals.ts.
+   */
+  INTERNAL_EMAIL_DOMAIN: "company.com",
+
+  /**
+   * Tool names whose params should be checked for an external recipient.
+   * Used by hasExternalRecipient() in signals.ts.
+   */
+  OUTBOUND_EMAIL_TOOLS: ["send_email", "forward_email", "draft_email"] as string[],
+
+  /**
+   * Keyword patterns for detecting stake_flags from action params/entities.
+   * Each entry: [flag, regex-source-string].
+   * All patterns are RegExp-constructed at runtime from these strings.
+   */
+  STAKE_PATTERN_MONEY:      "discount|pricing|price|salary|compensation|\\$|amount|payment|revenue",
+  STAKE_PATTERN_LEGAL:      "legal|contract|terms|liability|compliance|confidential|NDA",
+  STAKE_PATTERN_REPUTATION: "sensitive|hr|performance|personal|private|embarrass",
+} as const;
+
+/**
+ * Increment added to blast_radius per additional email/person entity
+ * beyond the first. Clamped so blast_radius never exceeds 1.
+ */
+export const BLAST_RADIUS_ENTITY_INCREMENT = 0.08 as const;
+

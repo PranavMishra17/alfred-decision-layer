@@ -154,11 +154,9 @@ If a task appears to require any of the above, stop and raise a BUG block with s
 
 ### v1.0.0 | summary of changes in one line 
 
-DESIGN.md v1. Revise only when the canonical docs materially change or when a new operating rule is adopted across the team. Bump version on every change.
-
 - Important bugs, resolutions - need to be documented. Keep the versioning system append only.
 
-### v1.0.1 | feat(M1): scaffold core app structure + UI shells | 2026-04-18
+### v1.0.1 | feat(M1): scaffold core app structure + UI shells
 
 - Initialize Next.js + Tailwind scaffold (merged from temp dir)
 - Add global styles, theme tokens (Obsidian + Cream palette)
@@ -172,3 +170,28 @@ notes:
 - Avatar replaced with typographic/geometric mark
 - Minor inline styles in landing page (to be moved in M2)
 - Interaction logic deferred (M3–M8 per plan)
+
+commit (M1) established the app scaffold: Next.js + Tailwind setup, base layout, routing, and UI shells (chat/mind panels) with minimal state + placeholder components. No business logic existed yet.
+
+
+### v1.0.2 | feat(M2): add core types, decision config, and tool registry
+
+- Expand decision types + add obligation, trace, tool, message, scenario types
+- Introduce config module (thresholds, timeouts, tunables)
+- Implement decision weights + reversibility scores
+- Add tool registry + executor with mock integrations (email, calendar, tasks, contacts)
+- Add preloaded scenario fixtures (aligned to UX spec)
+- Update DecisionBadge (SILENT_DUPE support)
+
+notes:
+- Strongly typed unions used where docs specified strings (no runtime impact)
+- weights.ts introduced early to avoid later breaking changes
+- Minor type simplification for Scenario.pre_seeded_obligations (tsc-clean, same shape)
+- Some JSON ↔ type mismatch (raised_at string vs number) deferred to store normalization (M6)
+- Signals/risk/policy/fallback logic deferred to M4
+- LLM, trace infra, and security layers deferred to M3/M5
+
+commit (M2) builds the foundational data layer and execution surface: all core types are now defined, decision configuration is centralized, and a registry-based tool system (with mocks) is in place. The system is now structurally ready for decision computation (M4), LLM integration (M3), and state wiring (M6).
+
+### v1.0.3 | feat(M3): LLM integration + trace bus | 2026-04-18
+
