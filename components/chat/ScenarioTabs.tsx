@@ -38,7 +38,7 @@ export function ScenarioTabs() {
           }`}
           title={s.description}
         >
-          {s.id.replace("scenario_", "").replace(/_/g, " ")}
+          {s.title}
         </button>
       ))}
     </div>

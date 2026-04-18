@@ -10,7 +10,6 @@
  * Canonical source: DECISION_LAYER.md §9
  */
 
-import { randomUUID }                              from "crypto";
 import type { Action, Decision, DecisionContext,
               SignalSet, Verdict }                 from "@/types/decision";
 import { SIGNAL_THRESHOLDS, THRESHOLD_DEFAULTS,

@@ -19,7 +19,6 @@
  *  - all timeouts/model IDs from lib/config
  */
 
-import { randomUUID }              from "crypto";
 import { createTraceBus }          from "@/lib/trace/bus";
 import type { TraceBus }           from "@/lib/trace/bus";
 import { scanForInjections,
@@ -79,7 +78,7 @@ export async function* runDecisionPipeline(
   turn: PipelineTurn,
   ctx:  PipelineContext
 ): AsyncGenerator<TraceEvent> {
-  const run_id = randomUUID();
+  const run_id = crypto.randomUUID();
   const bus    = createTraceBus(run_id);
 
   // Yield a helper — every bus event is forwarded to the SSE caller
@@ -205,7 +204,7 @@ export async function* runDecisionPipeline(
 
   for (const rawAction of llmOutput.actions) {
     const action: Action = {
-      id:   randomUUID(),
+      id:   crypto.randomUUID(),
       hash: `${rawAction.tool}:${JSON.stringify(rawAction.params)}`,
       ...rawAction,
       entities: rawAction.entities ?? [],

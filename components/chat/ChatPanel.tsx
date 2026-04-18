@@ -18,6 +18,9 @@ type MessageEntry = {
   id:      string;
   role:    "user" | "assistant";
   content: string;
+  decisions?: Decision[];
+  actions?: any[];
+  clarifications?: ClarificationSpec[];
 };
 
 /**
@@ -281,6 +284,7 @@ export function ChatPanel() {
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: "var(--bg-chat-surface)" }}>
+      {messages.length === 0 && <ScenarioTabs />}
 
       {/* Messages area */}
       <div
@@ -292,7 +296,14 @@ export function ChatPanel() {
         {messages.length === 0 && <WelcomePrompt />}
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} role={msg.role} content={msg.content} />
+          <MessageBubble 
+            key={msg.id} 
+            role={msg.role} 
+            content={msg.content}
+            decisions={msg.decisions}
+            actions={msg.actions}
+            clarifications={msg.clarifications}
+          />
         ))}
 
         {/* Streaming draft */}
@@ -382,15 +393,18 @@ export function ChatPanel() {
 // ---------------------------------------------------------------------------
 
 function MessageBubble({
-  role, content, streaming = false,
+  role, content, streaming = false, decisions, actions, clarifications
 }: {
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
+  decisions?: any[];
+  actions?: any[];
+  clarifications?: any[];
 }) {
   const isUser = role === "user";
   return (
-    <div className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <div className={`flex flex-col gap-2 w-full ${isUser ? "items-end" : "items-start"}`}>
       <div
         className="max-w-[85%] px-3 py-2 rounded-lg font-sans text-sm leading-relaxed"
         style={{
@@ -413,6 +427,16 @@ function MessageBubble({
           />
         )}
       </div>
+      {!isUser && (
+        <div className="flex flex-col gap-2 w-full mt-1">
+          {decisions?.map((d, i) => (
+             <OutcomeCard key={`d-${i}`} decision={d} action={actions?.[i]} />
+          ))}
+          {clarifications?.map((c, i) => (
+             <OutcomeCard key={`c-${i}`} clarification={c} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
