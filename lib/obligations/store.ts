@@ -5,7 +5,7 @@
 
 import type { StateCreator }      from "zustand";
 import type { PendingObligation } from "@/types/obligation";
-import { applyResolutions }       from "./resolver";
+import { applyResolutions }       from "@/lib/obligations/resolver";
 
 export interface ObligationSlice {
   open_obligations: PendingObligation[];
@@ -20,7 +20,7 @@ export interface ObligationSlice {
 export const createObligationSlice: StateCreator<ObligationSlice> = (set) => ({
   open_obligations: [],
 
-  addObligations: (newObligations, turn_id) =>
+  addObligations: (newObligations) =>
     set((state) => {
       const added: PendingObligation[] = newObligations.map((o) => ({
         id: `obl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,

@@ -4,6 +4,7 @@ import { useState } from "react";
 import PRELOADED_SCENARIOS from "@/scenarios/preloaded.json";
 import { useStore } from "@/state/store";
 import { ScenarioModal } from "./ScenarioModal";
+import type { Scenario } from "./ScenarioModal";
 
 export function ScenarioTabs() {
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export function ScenarioTabs() {
     </div>
       {modalScenario && (
         <ScenarioModal 
-          scenario={modalScenario as any} 
+          scenario={modalScenario as unknown as Scenario} 
           onClose={() => setModalScenario(null)} 
           onSend={handleSendScenario} 
         />

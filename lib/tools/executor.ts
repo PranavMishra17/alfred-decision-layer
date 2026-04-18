@@ -48,7 +48,7 @@ export async function executeTool(call: ToolCall): Promise<ToolResult> {
   try {
     // Validate against registry (throws if unknown)
     getTool(call.tool);
-  } catch (err) {
+  } catch {
     return {
       tool:       call.tool,
       success:    false,

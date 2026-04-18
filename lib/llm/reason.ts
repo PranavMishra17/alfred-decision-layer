@@ -18,6 +18,18 @@ import { LLM_CONFIG, TIMEOUTS }    from "@/lib/config";
 import type { LLMReasoningOutput } from "@/types/decision";
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function extractJSON(text: string): unknown {
+  let clean = text.trim();
+  const match = clean.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) {
+    clean = match[1].trim();
+  }
+  return JSON.parse(clean);
+}
+
+// ---------------------------------------------------------------------------
 // Primary Sonnet call with streaming
 // ---------------------------------------------------------------------------
 
@@ -65,7 +77,13 @@ export async function callPrimaryModel(
     clearTimeout(timeoutId);
 
     // Zod validate
-    const parsed = JSON.parse(accumulated);
+    let parsed: unknown;
+    try {
+      parsed = extractJSON(accumulated);
+    } catch (e: unknown) {
+      bus.emit("P2", "reason.failed", { reason: `JSON Extract Error: ${e instanceof Error ? e.message : String(e)}`, detail: accumulated });
+      throw e;
+    }
     const validated = LLMOutputSchema.parse(parsed);
     bus.emit("P2", "reason.complete", { output: validated });
     return validated as LLMReasoningOutput;
@@ -112,7 +130,7 @@ export async function retryWithValidationError(
       .map((b) => (b as { type: "text"; text: string }).text)
       .join("");
 
-    const parsed    = JSON.parse(text);
+    const parsed    = extractJSON(text);
     const validated = LLMOutputSchema.parse(parsed);
     bus.emit("P2", "reason.complete", { output: validated, retried: true });
     return validated as LLMReasoningOutput;
@@ -160,7 +178,7 @@ export async function callSafeMode(
       .join("");
 
     try {
-      const parsed    = JSON.parse(text);
+      const parsed    = extractJSON(text);
       const validated = LLMOutputSchema.parse(parsed);
       bus.emit("P2", "reason.complete", { output: validated, safe_mode: true });
       return validated as LLMReasoningOutput;

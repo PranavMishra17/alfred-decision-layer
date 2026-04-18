@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlfredAvatar }   from "@/components/shared/AlfredAvatar";
 import { DecisionBadge }  from "@/components/shared/DecisionBadge";
-import { pushClientEvent, getClientBus, initClientBus } from "@/lib/trace/bus";
+import { pushClientEvent, getClientBus } from "@/lib/trace/bus";
+import { TOOL_REGISTRY } from "@/lib/tools/registry";
 import type { TraceEvent, Phase }                        from "@/types/trace";
 import type { Verdict }                                  from "@/types/decision";
 
@@ -59,7 +60,7 @@ export function MindPanel() {
       if (!bus) return;
 
       // Re-render on every new event
-      setRuns((prev) => buildRunsList(bus.events));
+      setRuns(() => buildRunsList(bus.events));
     };
 
     const clearHandler = () => {
@@ -361,11 +362,7 @@ function EventRow({ event }: { event: TraceEvent }) {
 // ---------------------------------------------------------------------------
 
 function ToolsSection() {
-  const tools = Object.values(
-    // Dynamic import avoids tree-shaking issues
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require("@/lib/tools/registry").TOOL_REGISTRY as Record<string, { name: string; description: string; reversibility: string; default_verdict_hint: string }>
-  );
+  const tools = Object.values(TOOL_REGISTRY);
 
   return (
     <div

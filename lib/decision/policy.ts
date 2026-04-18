@@ -33,7 +33,7 @@ export function decide(
 ): Decision {
   try {
     return runGate(action, signals, ctx);
-  } catch (err) {
+  } catch {
     return makeDecision({
       action_id:        action.id,
       verdict:          "REFUSE",

@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Decision, ClarificationSpec } from "@/types/decision";
+import type { Decision, ClarificationSpec, Verdict } from "@/types/decision";
 import { DecisionBadge } from "@/components/shared/DecisionBadge";
 
 interface OutcomeProps {
   decision?: Decision;
-  action?: any; // the raw action
+  action?: Record<string, unknown>; // the raw action
   clarification?: ClarificationSpec; 
 }
 
@@ -20,11 +20,11 @@ export function OutcomeCard({ decision, action, clarification }: OutcomeProps) {
   switch (decision.verdict) {
     case "SILENT":
     case "SILENT_DUPE":
-      return <SilentCard decision={decision} action={action} />;
+      return <SilentCard verdict={decision.verdict} action={action || {}} />;
     case "NOTIFY":
-      return <NotifyCard decision={decision} action={action} />;
+      return <NotifyCard action={action || {}} />;
     case "CONFIRM":
-      return <ConfirmCard decision={decision} action={action} />;
+      return <ConfirmCard decision={decision} />;
     case "REFUSE":
       return <RefuseCard decision={decision} />;
     case "CLARIFY":
@@ -34,11 +34,11 @@ export function OutcomeCard({ decision, action, clarification }: OutcomeProps) {
   }
 }
 
-function SilentCard({ decision, action }: { decision: Decision; action: any }) {
-  const isDupe = decision.verdict === "SILENT_DUPE";
+function SilentCard({ verdict, action }: { verdict: string; action: Record<string, unknown> }) {
+  const isDupe = verdict === "SILENT_DUPE";
   return (
     <div className="flex items-center gap-2 mt-2 px-3 py-1.5 rounded bg-black/10 border border-transparent">
-      <DecisionBadge verdict={decision.verdict} size="sm" />
+      <DecisionBadge verdict={verdict as Verdict} size="sm" />
       <span className="font-sans text-sm text-gray-400">
         {isDupe ? "Already handled — see previous turn." : `alfred_ acted silently via ${action?.tool || "tool_use"}.`}
       </span>
@@ -46,7 +46,7 @@ function SilentCard({ decision, action }: { decision: Decision; action: any }) {
   );
 }
 
-function NotifyCard({ decision, action }: { decision: Decision; action: any }) {
+function NotifyCard({ action }: { action: Record<string, unknown> }) {
   const [timeLeft, setTimeLeft] = useState(10);
   const [cancelled, setCancelled] = useState(false);
 
@@ -101,7 +101,7 @@ function NotifyCard({ decision, action }: { decision: Decision; action: any }) {
   );
 }
 
-function ConfirmCard({ decision, action }: { decision: Decision; action: any }) {
+function ConfirmCard({ decision }: { decision: Decision }) {
   const [resolved, setResolved] = useState<"confirmed" | "cancelled" | null>(null);
   
   return (

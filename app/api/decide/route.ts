@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
           try {
             const frame = `data: ${JSON.stringify(event)}\n\n`;
             controller.enqueue(encoder.encode(frame));
-          } catch (serErr) {
+          } catch {
             // Serialization error on a single event is non-fatal
             const errFrame = `data: ${JSON.stringify({
               run_id: "unknown", phase: "P0", kind: "render.done",

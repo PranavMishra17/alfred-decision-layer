@@ -39,7 +39,8 @@ export class TTSPlayer {
 
     try {
       if (!this.audioContext) {
-        this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+        const AudioCtx = window.AudioContext || (window as unknown as Window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        this.audioContext = new AudioCtx({
           sampleRate: 44100
         });
       }

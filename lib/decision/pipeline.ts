@@ -20,7 +20,6 @@
  */
 
 import { createTraceBus }          from "@/lib/trace/bus";
-import type { TraceBus }           from "@/lib/trace/bus";
 import { scanForInjections,
          hasHighSeverityFlag }     from "@/lib/security/scan";
 import { TOOL_REGISTRY }           from "@/lib/tools/registry";
@@ -36,7 +35,6 @@ import {
   buildSystemPrompt,
   buildUserMessage,
 }                                  from "@/lib/llm/prompts/system";
-import { LLMOutputSchema }         from "@/lib/llm/schema";
 import type { TraceEvent }         from "@/types/trace";
 import type { DecisionContext,
               LLMReasoningOutput,
@@ -82,11 +80,7 @@ export async function* runDecisionPipeline(
   const bus    = createTraceBus(run_id);
 
   // Yield a helper — every bus event is forwarded to the SSE caller
-  function* drainBus(before: number): Generator<TraceEvent> {
-    for (const e of bus.events.slice(before)) {
-      yield e;
-    }
-  }
+
   let cursor = 0;
   function* flush(): Generator<TraceEvent> {
     const events = bus.events.slice(cursor);

@@ -6,7 +6,7 @@ import type { TraceEvent }         from "@/types/trace";
 import { useStore }                from "@/state/store";
 import { OutcomeCard } from "./OutcomeCards";
 import { ScenarioTabs } from "./ScenarioTabs";
-import { ObligationChip } from "./ObligationChip";
+import type { Scenario } from "./ScenarioModal";
 import type { Decision, ClarificationSpec } from "@/types/decision";
 import { TTSPlayer } from "@/lib/tts/player";
 import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
@@ -20,7 +20,7 @@ type MessageEntry = {
   role:    "user" | "assistant";
   content: string;
   decisions?: Decision[];
-  actions?: any[];
+  actions?: Record<string, unknown>[];
   clarifications?: ClarificationSpec[];
 };
 
@@ -65,12 +65,12 @@ export function ChatPanel() {
   
   useEffect(() => {
     const handleScenario = (e: Event) => {
-      const ce = e as CustomEvent<{ instruction: string; scenario: any }>;
+      const ce = e as CustomEvent<{ instruction: string; scenario: Scenario }>;
       const { instruction, scenario } = ce.detail;
       
-      const scenarioHistory = (scenario.conversation_history || []).map((m: any, i: number) => ({
+      const scenarioHistory: MessageEntry[] = (scenario.conversation_history || []).map((m, i: number) => ({
         id: `history-${i}`,
-        role: m.role,
+        role: m.role as "user" | "assistant",
         content: m.content
       }));
       setMessages(scenarioHistory);
@@ -143,8 +143,8 @@ export function ChatPanel() {
 
       let runId = "";
       let tokenAccumulator = "";
-      let turnDecisions: Decision[] = [];
-      let turnActions: any[] = [];
+      const turnDecisions: Decision[] = [];
+      const turnActions: Record<string, unknown>[] = [];
       let turnClarifications: ClarificationSpec[] = [];
       
       // M9 TTS state
@@ -185,7 +185,7 @@ export function ChatPanel() {
             );
 
             if (event.kind === "reason.complete") {
-              const p = event.payload as { output?: { new_obligations?: any[]; obligation_resolutions?: string[]; clarification_specs?: ClarificationSpec[] } };
+              const p = event.payload as { output?: { new_obligations?: { action_ref: string; condition: string }[]; obligation_resolutions?: string[]; clarification_specs?: ClarificationSpec[] } };
               if (p.output?.new_obligations?.length) {
                 addObligations(p.output.new_obligations, event.run_id);
               }
@@ -195,7 +195,7 @@ export function ChatPanel() {
               if (p.output?.clarification_specs?.length) turnClarifications = p.output.clarification_specs;
             }
             if (event.kind === "act.completed") {
-              const p = event.payload as { decision?: any; hash?: string; action?: any };
+              const p = event.payload as { decision?: Decision; hash?: string; action?: Record<string, unknown> };
               if (p.decision) {
                 addActionHistory(p.decision);
                 turnDecisions.push(p.decision);
@@ -281,7 +281,7 @@ export function ChatPanel() {
       // Scroll to end
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     }
-  }, [input, busy, anthropicApiKey, threshold, messages]);
+  }, [input, busy, anthropicApiKey, threshold, messages, open_obligations, idempotencyHashes, actionHistory, addObligations, resolveObligations, addActionHistory, addIdempotencyHash, injectTimeout, injectMalformedOutput, injectMissingContext, setInjectTimeout, setInjectMalformedOutput, setInjectMissingContext, cartesiaApiKey]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -418,9 +418,9 @@ function MessageBubble({
   role: "user" | "assistant";
   content: string;
   streaming?: boolean;
-  decisions?: any[];
-  actions?: any[];
-  clarifications?: any[];
+  decisions?: Decision[];
+  actions?: Record<string, unknown>[];
+  clarifications?: ClarificationSpec[];
 }) {
   const isUser = role === "user";
   return (
@@ -461,22 +461,8 @@ function MessageBubble({
   );
 }
 
-function ThinkingDots() {
-  return (
-    <div className="flex gap-1 items-center h-5">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="w-1.5 h-1.5 rounded-full"
-          style={{
-            backgroundColor: "var(--text-muted)",
-            animation:       `thinking-dot 1.2s ${i * 0.2}s ease-in-out infinite`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
+// ThinkingDots is handled via AlfredAvatar now.
+
 
 function WelcomePrompt() {
   return (
