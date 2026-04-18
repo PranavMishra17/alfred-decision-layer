@@ -11,7 +11,8 @@ export const runtime = "edge";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, api_key } = body;
+    const { text, api_key: body_api_key } = body;
+    const api_key = body_api_key || process.env.CARTESIA_API_KEY;
 
     if (!api_key || !text) {
       return new Response(JSON.stringify({ error: "Missing api_key or text" }), { status: 400 });

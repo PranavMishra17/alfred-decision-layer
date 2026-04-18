@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
+import { EasterEggAvatar } from "@/components/shared/EasterEggAvatar";
 import { DecisionBadge } from "@/components/shared/DecisionBadge";
 import type { Verdict } from "@/types/decision";
 
@@ -56,9 +57,10 @@ const VERDICT_STRIP: {
 export default function LandingPage() {
   return (
     <main
-      className="min-h-dvh flex flex-col items-center justify-center px-6 py-12"
+      className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden"
       style={{ background: "var(--bg-primary)" }}
     >
+      <EasterEggAvatar />
       {/* ----------------------------------------------------------------
           Hero
       ----------------------------------------------------------------- */}
@@ -130,11 +132,13 @@ export default function LandingPage() {
         >
           Five execution verdicts
         </p>
-        <div className="flex flex-col gap-3">
-          {VERDICT_STRIP.map((entry) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+          {VERDICT_STRIP.map((entry, index) => (
             <div
               key={entry.verdict}
-              className="verdict-row flex items-start gap-4 rounded-lg px-4 py-4 border"
+              className={`verdict-row flex flex-col items-start gap-3 rounded-lg px-4 py-4 border h-full ${
+                index === 4 ? "md:col-span-2 md:w-[48%] mx-auto w-full" : ""
+              }`}
               style={{
                 backgroundColor: "var(--bg-tertiary)",
                 borderColor:     "var(--border-subtle)",

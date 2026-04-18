@@ -345,7 +345,7 @@ function EventRow({ event }: { event: TraceEvent }) {
       </span>
       {event.payload !== undefined && event.payload !== null && (
         <span
-          className="font-mono text-xs truncate"
+          className="font-mono text-xs overflow-x-auto whitespace-pre block w-full max-w-[280px] pb-1 hide-scrollbar"
           style={{ color: "var(--text-secondary)" }}
           title={typeof event.payload === "object" ? JSON.stringify(event.payload) : String(event.payload)}
         >

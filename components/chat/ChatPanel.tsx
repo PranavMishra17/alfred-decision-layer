@@ -9,6 +9,7 @@ import { ScenarioTabs } from "./ScenarioTabs";
 import { ObligationChip } from "./ObligationChip";
 import type { Decision, ClarificationSpec } from "@/types/decision";
 import { TTSPlayer } from "@/lib/tts/player";
+import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
 
 // ---------------------------------------------------------------------------
 // Input + message state
@@ -61,18 +62,37 @@ export function ChatPanel() {
   // ---------------------------------------------------------------------------
   // Send turn → /api/decide SSE
   // ---------------------------------------------------------------------------
+  
+  useEffect(() => {
+    const handleScenario = (e: Event) => {
+      const ce = e as CustomEvent<{ instruction: string; scenario: any }>;
+      const { instruction, scenario } = ce.detail;
+      
+      const scenarioHistory = (scenario.conversation_history || []).map((m: any, i: number) => ({
+        id: `history-${i}`,
+        role: m.role,
+        content: m.content
+      }));
+      setMessages(scenarioHistory);
+      setInput(instruction);
+      
+      setTimeout(() => {
+        const btn = document.getElementById("chat-send-btn");
+        if (btn && !btn.hasAttribute("disabled")) {
+          btn.click();
+        }
+      }, 100);
+    };
+    window.addEventListener("alfred:submit-scenario", handleScenario);
+    return () => window.removeEventListener("alfred:submit-scenario", handleScenario);
+  }, []);
+
   const send = useCallback(async () => {
     const text = input.trim();
     if (!text || busy) return;
 
-    if (!anthropicApiKey) {
-      setMessages((prev) => [...prev, {
-        id:      crypto.randomUUID(),
-        role:    "assistant",
-        content: "No API key configured. Open Settings and enter your Anthropic key.",
-      }]);
-      return;
-    }
+    // Allow sending even if local anthropicApiKey is blank to hit the server's process.env fallback.
+    // If the server also lacks it, the Edge API will return a 401 stringified error payload naturally.
 
     // Add user message immediately
     const userEntry: MessageEntry = {
@@ -313,8 +333,8 @@ export function ChatPanel() {
 
         {/* Busy indicator */}
         {busy && !draft && (
-          <div className="flex items-center gap-2 pl-2">
-            <ThinkingDots />
+          <div className="flex items-center gap-2 pl-2 mt-2">
+            <AlfredAvatar state="thinking" size={24} />
           </div>
         )}
 
@@ -428,7 +448,7 @@ function MessageBubble({
         )}
       </div>
       {!isUser && (
-        <div className="flex flex-col gap-2 w-full mt-1">
+        <div className={`flex flex-col gap-2 w-full mt-1 ${isUser ? "items-end" : "items-start"}`}>
           {decisions?.map((d, i) => (
              <OutcomeCard key={`d-${i}`} decision={d} action={actions?.[i]} />
           ))}

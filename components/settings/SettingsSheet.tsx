@@ -46,11 +46,13 @@ export function SettingsSheet({ onClose }: SettingsSheetProps) {
           {/* API Keys */}
           <section className="flex flex-col gap-4">
             <h3 className="font-mono text-xs uppercase tracking-wider text-[var(--accent-copper)]">API Capabilities</h3>
+            <form autoComplete="off" className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
             <div className="flex flex-col gap-2">
               <label className="font-sans text-sm text-[var(--text-secondary)]">Anthropic API Key</label>
               <input 
                 type="password"
                 placeholder="sk-ant-..."
+                autoComplete="new-password"
                 className="bg-black/20 border border-[var(--border-subtle)] rounded p-2 text-sm font-mono text-white focus:border-[var(--accent-copper)] outline-none"
                 value={anthropicApiKey}
                 onChange={(e) => setAnthropicApiKey(e.target.value)}
@@ -63,12 +65,14 @@ export function SettingsSheet({ onClose }: SettingsSheetProps) {
               <input 
                 type="password"
                 placeholder="sk-cartesia-..."
+                autoComplete="new-password"
                 className="bg-black/20 border border-[var(--border-subtle)] rounded p-2 text-sm font-mono text-white focus:border-[var(--accent-copper)] outline-none"
                 value={cartesiaApiKey}
                 onChange={(e) => setCartesiaApiKey(e.target.value)}
               />
               <span className="font-mono text-[10px] text-[var(--text-muted)]">Required for P5 TTS streaming (M9).</span>
             </div>
+            </form>
           </section>
 
           <hr className="border-[var(--border-subtle)]" />

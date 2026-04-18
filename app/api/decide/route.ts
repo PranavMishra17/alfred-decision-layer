@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const api_key = body.api_key as string | undefined;
+  const api_key = (body.api_key || process.env.ANTHROPIC_API_KEY) as string | undefined;
   if (!api_key) {
     return new Response(
       JSON.stringify({ error: "api_key is required" }),
