@@ -145,7 +145,7 @@ body {
    Utility classes
 -------------------------------------------------------- */
 .animate-slide-up    { animation: slide-up  150ms ease-out forwards; }
-.animate-fade-in     { animation: fade-in   200ms ease-out forwards; }
+.animate-fade-in     { animation: fade-in   400ms ease-out both; }
 .animate-sand-pulse  { animation: sand-pulse 2.4s ease-in-out infinite; }
 
 /* Easter egg float and pop */

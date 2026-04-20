@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import { initClientBus } from "@/lib/trace/bus";
 import type { TraceEvent } from "@/types/trace";
 import { useStore } from "@/state/store";
@@ -174,9 +174,8 @@ export function ChatPanel() {
       let sentenceBuffer = "";
       let sentencesSpoken = 0;
 
-      if (cartesiaApiKey) {
-        ttsPlayerRef.current = new TTSPlayer(cartesiaApiKey);
-      }
+      // Always create player — /api/tts falls back to server CARTESIA_API_KEY if no BYOK key
+      ttsPlayerRef.current = new TTSPlayer(cartesiaApiKey);
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -562,6 +561,39 @@ export function ChatPanel() {
 }
 
 // ---------------------------------------------------------------------------
+// Minimal markdown renderer — handles bold, italic, blockquote, line breaks
+// ---------------------------------------------------------------------------
+
+function renderMarkdown(text: string): React.ReactNode[] {
+  return text.split("\n").map((line, lineIdx) => {
+    const isQuote = line.startsWith("> ");
+    const raw = isQuote ? line.slice(2) : line;
+
+    // Parse inline: **bold**, *italic*, `code`
+    const parts: React.ReactNode[] = [];
+    const pattern = /(\*\*(.+?)\*\*|\*(.+?)\*|`(.+?)`)/g;
+    let last = 0;
+    let m;
+    while ((m = pattern.exec(raw)) !== null) {
+      if (m.index > last) parts.push(raw.slice(last, m.index));
+      if (m[2] !== undefined) parts.push(<strong key={m.index}>{m[2]}</strong>);
+      else if (m[3] !== undefined) parts.push(<em key={m.index}>{m[3]}</em>);
+      else if (m[4] !== undefined) parts.push(<code key={m.index} className="font-mono text-xs px-1 py-0.5 rounded" style={{ backgroundColor: "var(--bg-input)" }}>{m[4]}</code>);
+      last = m.index + m[0].length;
+    }
+    if (last < raw.length) parts.push(raw.slice(last));
+
+    const lineContent = isQuote
+      ? <blockquote key={lineIdx} className="border-l-2 pl-2 italic" style={{ borderColor: "var(--text-muted)", color: "var(--text-secondary)" }}>{parts}</blockquote>
+      : <span key={lineIdx}>{parts}</span>;
+
+    return lineIdx === 0
+      ? lineContent
+      : <React.Fragment key={lineIdx}><br />{lineContent}</React.Fragment>;
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
@@ -603,7 +635,7 @@ function MessageBubble({
             color: isUser ? "var(--bg-primary)" : "var(--text-primary)",
           }}
         >
-          {content}
+          {isUser ? content : renderMarkdown(content)}
           {streaming && (
             <span
               style={{

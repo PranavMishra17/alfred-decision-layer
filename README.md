@@ -1,8 +1,24 @@
-# alfred_ — Decision Layer
+<div align="center">
+
+<img src="img/title.png" alt="alfred_ Decision Layer" width="700" />
+
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-alfred__-C4A882?style=flat&logo=vercel&logoColor=black)](https://alfred-decision-layer-lime.vercel.app)
+[![Built with Anthropic](https://img.shields.io/badge/Anthropic-claude--sonnet--4--6-D97706?style=flat&logo=anthropic&logoColor=white)](https://anthropic.com)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![TTS by Cartesia](https://img.shields.io/badge/TTS-Cartesia-7C3AED?style=flat&logoColor=white)](https://cartesia.ai)
+
+</div>
+
+---
+
+<img src="img/chat.png" alt="alfred_ chat and Mind Panel" width="100%" />
+
+---
 
 A hybrid LLM + deterministic decision pipeline that determines when an AI assistant should act silently, notify the user, confirm before acting, ask for clarification, or refuse. Built as a Next.js 14 application with a real-time trace UI.
-
-**Live demo:** [[Alfred_](https://alfred-decision-layer-lime.vercel.app)]
 
 ---
 
@@ -22,6 +38,8 @@ npm run dev         # → http://localhost:3000
 ## How Decisions Are Made
 
 Every user message passes through five stages:
+
+<img src="img/pepeline.png" alt="Five-phase pipeline diagram" width="100%" />
 
 | Stage | Name | What happens |
 |-------|------|-------------|
@@ -105,7 +123,7 @@ Failure paths are visible in the Mind Panel under P2 with red badges. Safe-mode 
 | 5 | Bulk Delete | adversarial | REFUSE (irreversible mass action) |
 | 6 | Social Engineering | adversarial | CONFIRM (score=1.0, all signals fire) |
 | 7 | LLM Timeout Simulation | failure | CLARIFY via safe-mode fallback |
-| 8 | Malformed Output Recovery | failure | NOTIFY via retry/safe-mode chain |
+| 8 | Malformed Output Recovery | failure | CLARIFY via safe-mode fallback |
 | 9 | Read Email Aloud | easy | SILENT + TTS readout |
 
 ---
@@ -115,15 +133,16 @@ Failure paths are visible in the Mind Panel under P2 with red badges. Safe-mode 
 Run all scenarios against the live pipeline without the UI:
 
 ```bash
-ANTHROPIC_API_KEY=sk-... npx tsx scripts/test-pipeline.ts
+# reads ANTHROPIC_API_KEY from .env automatically
+npx tsx scripts/test-pipeline.ts
 
-# Single scenario:
-ANTHROPIC_API_KEY=sk-... npx tsx scripts/test-pipeline.ts --scenario scenario_03_contradicted_instruction
+# single scenario
+npx tsx scripts/test-pipeline.ts --scenario scenario_03_contradicted_instruction
 
-# Verbose trace output:
-ANTHROPIC_API_KEY=sk-... npx tsx scripts/test-pipeline.ts --verbose
+# verbose trace output
+npx tsx scripts/test-pipeline.ts --verbose
 
-# Dry-run (no API calls, just parses scenarios):
+# dry-run (no API calls)
 npx tsx scripts/test-pipeline.ts --no-llm
 ```
 
@@ -154,3 +173,11 @@ Exit code 0 if all `expected_verdict` fields match, 1 if any mismatch.
 - [DECISION_LAYER.md](./DECISION_LAYER.md) — Signal definitions, schema, P0-P5 spec
 - [DESIGN.md](./DESIGN.md) — Milestone history, design principles
 - [UI-UX-DESIGN.md](./UI-UX-DESIGN.md) — Chat and Mind Panel interaction spec
+
+---
+
+<div align="center">
+
+Built by [Pranav Mishra](https://portfolio-pranav-mishra-paranoid.vercel.app) &nbsp;·&nbsp; [GitHub](https://github.com/PranavMishra17/alfred-decision-layer)
+
+</div>

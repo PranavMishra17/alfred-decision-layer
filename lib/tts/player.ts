@@ -15,7 +15,7 @@ export class TTSPlayer {
   }
 
   public enqueueSentence(text: string) {
-    if (this.aborted || !this.apiKey) return;
+    if (this.aborted) return;
     const clean = text.trim();
     if (!clean) return;
     
