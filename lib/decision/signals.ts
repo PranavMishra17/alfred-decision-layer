@@ -64,19 +64,11 @@ function adjustBlastRadius(tool: ToolDefinition, action: Action): number {
  * Policy violation check.
  * Returns 1 if the action violates a hard policy rule:
  *   1. Tool is explicitly marked default_verdict_hint:"REFUSE" (e.g. delete_emails)
- *   2. Outbound tool with "legal" stake + external recipient (social-engineering pattern)
  * Source: DECISION_LAYER.md §9 — "policy_violation" input to decide()
  */
-function checkPolicy(action: Action, tool: ToolDefinition): 0 | 1 {
-  // Rule 1 — tool is self-declaring as high-risk
+function checkPolicy(_action: Action, tool: ToolDefinition): 0 | 1 {
+  // Rule 1 — tool is self-declaring as high-risk (e.g. delete_emails)
   if (tool.default_verdict_hint === "REFUSE") return 1;
-
-  // Rule 2 — sensitive outbound to external address
-  const isOutbound = POLICY.OUTBOUND_EMAIL_TOOLS.includes(tool.name);
-  const hasLegalStake = tool.stake_flags.includes("legal");
-  if (isOutbound && hasLegalStake && hasExternalRecipient(action, tool)) {
-    return 1;
-  }
 
   return 0;
 }

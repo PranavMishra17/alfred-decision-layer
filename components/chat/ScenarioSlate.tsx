@@ -32,6 +32,17 @@ export function ScenarioSlate({ scenario }: { scenario: Scenario }) {
   if (!ctx) return null;
 
   try {
+    if (ctx.meeting_invite) {
+      return (
+        <MeetingInviteSlate
+          invite={ctx.meeting_invite as unknown as MeetingInvite}
+          conflict={ctx.conflict as unknown as MeetingConflict | undefined}
+        />
+      );
+    }
+    if (ctx.inbox_preview) {
+      return <EmailInboxPreviewSlate preview={ctx.inbox_preview as unknown as InboxPreview} />;
+    }
     if (ctx.calendar_events) return <CalendarSlate events={ctx.calendar_events as unknown as CalendarEvent[]} />;
     if (ctx.calendar_events_today && ctx.available_slots_this_week) {
        return (
@@ -128,6 +139,76 @@ function MetricsSlate({ stats }: { stats: Record<string, unknown> }) {
           <span className="text-lg font-bold text-white tabular-nums">{String(v)}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+interface MeetingInvite {
+  from: string;
+  title: string;
+  date: string;
+  time: string;
+  status: string;
+}
+
+interface MeetingConflict {
+  title: string;
+  time: string;
+  date: string;
+}
+
+function MeetingInviteSlate({ invite, conflict }: { invite: MeetingInvite; conflict?: MeetingConflict }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col rounded-md bg-[var(--bg-input)] border border-[var(--border-subtle)] p-3 gap-2">
+        <div className="flex justify-between items-center">
+          <span className="font-mono text-[10px] uppercase text-[var(--accent-copper)]">Meeting Invite</span>
+          <span className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded ${
+            invite.status === "pending"
+              ? "border border-[var(--decision-confirm)] text-[var(--decision-confirm)]"
+              : "border border-[var(--border-subtle)] text-[var(--text-muted)]"
+          }`}>{invite.status}</span>
+        </div>
+        <span className="font-sans text-sm font-semibold text-white">{invite.title}</span>
+        <span className="font-mono text-xs text-[var(--text-secondary)]">{invite.date} · {invite.time}</span>
+        <span className="font-mono text-xs text-[var(--text-muted)]">From: {invite.from}</span>
+      </div>
+      {conflict && (
+        <div className="flex flex-col rounded-md bg-[var(--bg-input)] border border-[var(--decision-refuse)] p-3 gap-1">
+          <span className="font-mono text-[10px] uppercase text-[var(--decision-refuse)]">Conflict</span>
+          <span className="font-sans text-sm text-white">{conflict.title}</span>
+          <span className="font-mono text-xs text-[var(--text-muted)]">{conflict.date} · {conflict.time}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface InboxPreview {
+  from: string;
+  subject: string;
+  date: string;
+  body: string;
+}
+
+function EmailInboxPreviewSlate({ preview }: { preview: InboxPreview }) {
+  return (
+    <div className="flex flex-col rounded-md bg-white text-black p-4 border border-[var(--border-subtle)] shadow-inner font-sans gap-3">
+      <div className="flex border-b border-gray-200 pb-2">
+        <span className="text-sm font-bold text-gray-500 w-20">From:</span>
+        <span className="text-sm text-gray-900">{preview.from}</span>
+      </div>
+      <div className="flex border-b border-gray-200 pb-2">
+        <span className="text-sm font-bold text-gray-500 w-20">Subject:</span>
+        <span className="text-sm text-gray-900 font-semibold">{preview.subject}</span>
+      </div>
+      <div className="flex border-b border-gray-200 pb-2">
+        <span className="text-sm font-bold text-gray-500 w-20">Date:</span>
+        <span className="text-sm text-gray-900">{preview.date}</span>
+      </div>
+      <div className="pt-2">
+        <pre className="text-sm text-gray-800 whitespace-pre-wrap font-sans leading-relaxed">{preview.body}</pre>
+      </div>
     </div>
   );
 }

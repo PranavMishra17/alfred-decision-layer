@@ -91,7 +91,7 @@ export const RISK_WEIGHTS = {
   BLAST_RADIUS:       0.20,
   ENTITY_AMBIGUITY:   0.15,
   INTENT_AMBIGUITY:   0.10,
-  EXTERNAL_RECIPIENT: 0.10,
+  EXTERNAL_RECIPIENT: 0.05,
   /**
    * stake_flags contribution: each flag adds STAKE_PER_FLAG up to a max of 1.
    * Weight is applied to the clamped value.

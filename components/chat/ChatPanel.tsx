@@ -24,6 +24,9 @@ type MessageEntry = {
   actions?: Record<string, unknown>[];
   clarifications?: ClarificationSpec[];
   scenario?: Scenario;
+  safeModeFired?: boolean;
+  errorFired?: boolean;
+  originalUserMessage?: string;
 };
 
 /**
@@ -120,12 +123,19 @@ export function ChatPanel() {
     abortRef.current = ac;
 
     try {
+      // Extract mock_context from the scenario slate entry and pass as attachment_text
+      const scenarioEntry = messages.find((m) => m.scenario != null);
+      const attachmentText = scenarioEntry?.scenario?.mock_context
+        ? JSON.stringify(scenarioEntry.scenario.mock_context, null, 2)
+        : undefined;
+
       const res = await fetch("/api/decide", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: ac.signal,
         body: JSON.stringify({
           message: text,
+          attachment_text: attachmentText,
           api_key: anthropicApiKey,
           threshold,
           conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -156,6 +166,8 @@ export function ChatPanel() {
       const turnDecisions: Decision[] = [];
       const turnActions: Record<string, unknown>[] = [];
       let turnClarifications: ClarificationSpec[] = [];
+      let turnSafeModeFired = false;
+      let turnErrorFired = false;
 
       // M9 TTS state
       let ttsMode: "pending" | "none" | "clarify" | "first_sentence" | "full" = "pending";
@@ -213,6 +225,13 @@ export function ChatPanel() {
               if (p.hash) addIdempotencyHash(p.hash);
               if (p.action) turnActions.push(p.action);
             }
+            if (event.kind === "safemode.fired") {
+              turnSafeModeFired = true;
+            }
+            if (event.kind === "reason.failed") {
+              const p = event.payload as { reason?: string };
+              if (p.reason === "injected_malformed_output") turnErrorFired = true;
+            }
 
             // Accumulate response_draft tokens for chat display
             if (event.kind === "render.token") {
@@ -222,7 +241,11 @@ export function ChatPanel() {
                 if (verdicts.includes("CLARIFY") || turnClarifications.length > 0) ttsMode = "clarify";
                 else if (verdicts.includes("REFUSE")) ttsMode = "full";
                 else if (verdicts.includes("NOTIFY") || verdicts.includes("CONFIRM")) ttsMode = "first_sentence";
-                else ttsMode = "none";
+                else {
+                  // If we're getting render tokens on a SILENT turn, the LLM wrote
+                  // a response (e.g. answering a question or reading email aloud) — speak it
+                  ttsMode = "full";
+                }
 
                 if (ttsMode === "clarify") {
                   ttsPlayerRef.current?.enqueueSentence("I need a quick clarification.");
@@ -268,7 +291,10 @@ export function ChatPanel() {
             content: tokenAccumulator,
             decisions: turnDecisions,
             actions: turnActions,
-            clarifications: turnClarifications
+            clarifications: turnClarifications,
+            safeModeFired: turnSafeModeFired,
+            errorFired: turnErrorFired,
+            originalUserMessage: text,
           },
         ]);
       }
@@ -308,6 +334,117 @@ export function ChatPanel() {
     ttsPlayerRef.current?.abort();
   }, []);
 
+  const rerun = useCallback(async (originalMessage: string, overriddenObligationIds: string[]) => {
+    if (busy) return;
+    setBusy(true);
+    setDraft("");
+
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    const filteredObligations = open_obligations.filter(
+      (o) => !overriddenObligationIds.includes(o.id)
+    );
+
+    try {
+      const scenarioEntry = messages.find((m) => m.scenario != null);
+      const attachmentText = scenarioEntry?.scenario?.mock_context
+        ? JSON.stringify(scenarioEntry.scenario.mock_context, null, 2)
+        : undefined;
+
+      const res = await fetch("/api/decide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: ac.signal,
+        body: JSON.stringify({
+          message: originalMessage,
+          attachment_text: attachmentText,
+          api_key: anthropicApiKey,
+          threshold,
+          conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
+          open_obligations: filteredObligations,
+          idempotency_hashes: Array.from(idempotencyHashes),
+          action_history: actionHistory,
+          inject: { timeout: false, malformed_output: false, missing_context: false },
+        }),
+      });
+
+      if (!res.ok || !res.body) throw new Error(`API error ${res.status}`);
+
+      let tokenAccumulator = "";
+      const turnDecisions: Decision[] = [];
+      const turnActions: Record<string, unknown>[] = [];
+      let turnClarifications: ClarificationSpec[] = [];
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event: TraceEvent = JSON.parse(line.slice(6));
+            window.dispatchEvent(new CustomEvent("alfred:trace", { detail: event }));
+            if (event.kind === "reason.complete") {
+              const p = event.payload as { output?: { new_obligations?: { action_ref: string; condition: string }[]; obligation_resolutions?: string[]; clarification_specs?: ClarificationSpec[] } };
+              if (p.output?.new_obligations?.length) addObligations(p.output.new_obligations, event.run_id);
+              if (p.output?.obligation_resolutions?.length) resolveObligations(p.output.obligation_resolutions, event.run_id);
+              if (p.output?.clarification_specs?.length) turnClarifications = p.output.clarification_specs;
+            }
+            if (event.kind === "act.completed") {
+              const p = event.payload as { decision?: Decision; hash?: string; action?: Record<string, unknown> };
+              if (p.decision) { addActionHistory(p.decision); turnDecisions.push(p.decision); }
+              if (p.hash) addIdempotencyHash(p.hash);
+              if (p.action) turnActions.push(p.action);
+            }
+            if (event.kind === "render.token") {
+              const p = event.payload as { token?: string };
+              if (p.token) { tokenAccumulator += p.token; setDraft(tokenAccumulator); }
+            }
+          } catch { /* malformed SSE frame */ }
+        }
+      }
+
+      if (tokenAccumulator || turnDecisions.length > 0 || turnClarifications.length > 0) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: tokenAccumulator,
+            decisions: turnDecisions,
+            actions: turnActions,
+            clarifications: turnClarifications,
+          },
+        ]);
+      }
+      setDraft("");
+    } catch (err) {
+      if ((err as Error)?.name !== "AbortError") {
+        setMessages((prev) => [...prev, {
+          id: crypto.randomUUID(), role: "assistant",
+          content: `Re-run error: ${(err as Error).message}`,
+        }]);
+      }
+    } finally {
+      setBusy(false);
+      setDraft("");
+      abortRef.current = null;
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    }
+  }, [busy, open_obligations, messages, anthropicApiKey, threshold, idempotencyHashes, actionHistory, addObligations, resolveObligations, addActionHistory, addIdempotencyHash]);
+
+  const clarifyRerun = useCallback(async (originalMessage: string, answer: string) => {
+    const augmented = `${originalMessage}\n\nClarification: ${answer}`;
+    await rerun(augmented, []);
+  }, [rerun]);
+
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
@@ -334,6 +471,11 @@ export function ChatPanel() {
             actions={msg.actions}
             clarifications={msg.clarifications}
             scenario={msg.scenario}
+            safeModeFired={msg.safeModeFired}
+            errorFired={msg.errorFired}
+            originalUserMessage={msg.originalUserMessage}
+            onConfirm={rerun}
+            onClarify={clarifyRerun}
           />
         ))}
 
@@ -424,7 +566,8 @@ export function ChatPanel() {
 // ---------------------------------------------------------------------------
 
 function MessageBubble({
-  role, content, streaming = false, decisions, actions, clarifications, scenario
+  role, content, streaming = false, decisions, actions, clarifications, scenario,
+  safeModeFired, errorFired, originalUserMessage, onConfirm, onClarify
 }: {
   role: "user" | "assistant";
   content: string;
@@ -433,10 +576,16 @@ function MessageBubble({
   actions?: Record<string, unknown>[];
   clarifications?: ClarificationSpec[];
   scenario?: Scenario;
+  safeModeFired?: boolean;
+  errorFired?: boolean;
+  originalUserMessage?: string;
+  onConfirm?: (originalMessage: string, overriddenObligationIds: string[]) => void;
+  onClarify?: (originalMessage: string, answer: string) => void;
 }) {
   const isUser = role === "user";
   const allSilent = decisions && decisions.length > 0 && decisions.every(d => d.verdict === "SILENT" || d.verdict === "SILENT_DUPE");
-  const showContent = !allSilent || streaming; // Show while streaming, hide after if silent
+  const hasContent = content && content.trim().length > 0;
+  const showContent = !allSilent || streaming || hasContent; // Always show if LLM wrote a response
 
   return (
     <div className={`flex flex-col gap-2 w-full ${isUser ? "items-end" : "items-start"}`}>
@@ -472,11 +621,32 @@ function MessageBubble({
       )}
       {!isUser && (
         <div className={`flex flex-col gap-2 w-full mt-1 ${isUser ? "items-end" : "items-start"}`}>
+          {safeModeFired && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded border text-xs font-mono"
+              style={{ borderColor: "var(--decision-confirm)", color: "var(--decision-confirm)", backgroundColor: "var(--decision-confirm)10" }}>
+              ⚠ Primary reasoning timed out — safe mode active. Responses may be limited.
+            </div>
+          )}
+          {errorFired && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded border text-xs font-mono"
+              style={{ borderColor: "var(--decision-refuse)", color: "var(--decision-refuse)", backgroundColor: "var(--decision-refuse)10" }}>
+              ⚠ Malformed output detected — recovery attempted via retry chain.
+            </div>
+          )}
           {decisions?.map((d, i) => (
-            <OutcomeCard key={`d-${i}`} decision={d} action={actions?.[i]} />
+            <OutcomeCard
+              key={`d-${i}`}
+              decision={d}
+              action={actions?.[i]}
+              onConfirm={onConfirm ? (ids) => onConfirm(originalUserMessage ?? "", ids) : undefined}
+            />
           ))}
           {clarifications?.map((c, i) => (
-            <OutcomeCard key={`c-${i}`} clarification={c} />
+            <OutcomeCard
+              key={`c-${i}`}
+              clarification={c}
+              onClarify={onClarify ? (answer) => onClarify(originalUserMessage ?? "", answer) : undefined}
+            />
           ))}
         </div>
       )}

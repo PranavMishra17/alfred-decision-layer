@@ -23,6 +23,7 @@ export type TraceEventKind =
   | "reason.failed"
   | "reason.retry"
   | "reason.safemode"
+  | "safemode.fired"
   // P3 — Decide
   | "decide.signals"
   | "decide.score"

@@ -16,31 +16,6 @@ export interface Scenario {
   pre_seeded_obligations?: Record<string, unknown>[];
 }
 
-interface CalendarEvent {
-  time: string;
-  title: string;
-  attendees?: string[];
-  location: string;
-}
-
-interface SlotDay {
-  day: string;
-  slots: string[];
-}
-
-interface EmailDraft {
-  to: string;
-  subject: string;
-  body: string;
-}
-
-interface EmailItem {
-  from: string;
-  subject: string;
-  date: string;
-  sensitivity?: string;
-}
-
 interface ScenarioModalProps {
   scenario: Scenario;
   onClose: () => void;

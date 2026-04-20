@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(node -e \"const data = require\\('./scenarios/preloaded.json'\\); console.log\\('Count:', data.length\\); console.log\\('Last ID:', data[data.length-1].id\\); console.log\\('Has inbox_preview:', !!data[data.length-1].mock_context?.inbox_preview\\);\")",
+      "Bash(npx tsx:*)",
+      "Bash(npm run:*)",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(node -e \"require\\('dotenv'\\)\")",
+      "Bash(node --env-file=.env --import tsx/esm scripts/test-pipeline.ts --no-llm)",
+      "Bash(node --env-file=.env -e \"console.log\\(process.env.ANTHROPIC_API_KEY?.slice\\(0,10\\)\\)\")",
+      "Bash(node --env-file=.env -e ':*)"
+    ]
+  }
+}

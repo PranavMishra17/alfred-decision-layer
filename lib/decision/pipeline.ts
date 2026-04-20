@@ -139,11 +139,17 @@ export async function* runDecisionPipeline(
       bus.emit("P2", "reason.failed", { reason: "injected_timeout" });
       yield* flush();
       llmOutput = await callSafeMode(turn.api_key, turn.message, "injected_timeout", bus);
+      llmOutput = { ...llmOutput, actions: [] };
+      bus.emit("P2", "safemode.fired", { reason: "timeout" });
+      yield* flush();
     } else if (turn.inject?.malformed_output) {
       bus.emit("P2", "reason.started", { model: "injected" });
       bus.emit("P2", "reason.failed", { reason: "injected_malformed_output" });
       yield* flush();
       llmOutput = await callSafeMode(turn.api_key, turn.message, "injected_malformed_output", bus);
+      llmOutput = { ...llmOutput, actions: [] };
+      bus.emit("P2", "safemode.fired", { reason: "malformed_output" });
+      yield* flush();
     } else {
       try {
         llmOutput = await callPrimaryModel(turn.api_key, systemPrompt, userMsg, bus);
