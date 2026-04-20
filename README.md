@@ -31,6 +31,19 @@ Tasks that hold consequences but require user validation are suspended as "Oblig
 - **Pre-loaded Scenarios**: 8 specifically curated user-interaction workflows. Simply tap a scenario (e.g., "Delete Database", "Check Calendar") atop a fresh Chat session to instantly prepopulate and assess system capabilities in a strictly defined failure environment.
 - **Failure Injection Engine**: Integrated natively in the Application's `Settings` Sheet. Users can artificially force a backend P0 Validation Error (missing JSON), trigger an LLM Timeout locally, or artificially strip Mock Contexts to observe system resilience natively on the frontend without altering actual API conditions.
 
+### 5. Native TTS Streaming (Cartesia.ai)
+Includes natively streamed Web-Audio PCM parsing wrapped completely around UI text-token parsing loops. Gated completely onto logic outcomes (for example, `REFUSE` verdicts trigger full conversational dialog mapping via speech synthesis, whereas `SILENT` overrides bypass Cartesia to preserve pure autonomous runtime).
+
+---
+
+## 🛠️ Tech Stack Core
+
+- **Framework**: `Next.js 14` (App Router, Edge API enabled)
+- **UI Architecture**: React (Hooks), Vanilla CSS variable theming (Obsidian + Cream palettes — *No Tailwind dependencies bloat*).
+- **Core LLM**: `Anthropic Claude 3.5 Sonnet`
+- **State Store**: `Zustand` (+ strict sync hooks)
+- **TTS Generator**: `Cartesia` (`PCM` stream arrays via pure HTTP web standard Fetch).
+
 ---
 
 ## 🚀 Local Deployment / Usage

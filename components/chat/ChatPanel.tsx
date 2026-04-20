@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
-import { initClientBus }           from "@/lib/trace/bus";
-import type { TraceEvent }         from "@/types/trace";
-import { useStore }                from "@/state/store";
+import { initClientBus } from "@/lib/trace/bus";
+import type { TraceEvent } from "@/types/trace";
+import { useStore } from "@/state/store";
 import { OutcomeCard } from "./OutcomeCards";
 import { ScenarioTabs } from "./ScenarioTabs";
 import type { Scenario } from "./ScenarioModal";
+import { ScenarioSlate } from "./ScenarioSlate";
 import type { Decision, ClarificationSpec } from "@/types/decision";
 import { TTSPlayer } from "@/lib/tts/player";
 import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
@@ -16,12 +17,13 @@ import { AlfredAvatar } from "@/components/shared/AlfredAvatar";
 // ---------------------------------------------------------------------------
 
 type MessageEntry = {
-  id:      string;
-  role:    "user" | "assistant";
+  id: string;
+  role: "user" | "assistant";
   content: string;
   decisions?: Decision[];
   actions?: Record<string, unknown>[];
   clarifications?: ClarificationSpec[];
+  scenario?: Scenario;
 };
 
 /**
@@ -33,49 +35,57 @@ type MessageEntry = {
  * Source: DECISION_LAYER.md §21
  */
 export function ChatPanel() {
-  const [messages, setMessages]   = useState<MessageEntry[]>([]);
-  const [input,    setInput]      = useState("");
-  const [busy,     setBusy]       = useState(false);
-  const [draft,    setDraft]      = useState("");  // streaming response_draft tokens
-  const messagesEndRef            = useRef<HTMLDivElement>(null);
-  const inputRef                  = useRef<HTMLTextAreaElement>(null);
-  const abortRef                  = useRef<AbortController | null>(null);
-  const ttsPlayerRef              = useRef<TTSPlayer | null>(null);
+  const [messages, setMessages] = useState<MessageEntry[]>([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [draft, setDraft] = useState("");  // streaming response_draft tokens
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const ttsPlayerRef = useRef<TTSPlayer | null>(null);
 
-  const anthropicApiKey     = useStore((s) => s.anthropicApiKey);
-  const cartesiaApiKey      = useStore((s) => s.cartesiaApiKey);
-  const threshold           = useStore((s) => s.threshold);
-  const open_obligations    = useStore((s) => s.open_obligations);
-  const idempotencyHashes   = useStore((s) => s.idempotencyHashes);
-  const actionHistory       = useStore((s) => s.actionHistory);
-  const addObligations      = useStore((s) => s.addObligations);
-  const resolveObligations       = useStore((s) => s.resolveObligations);
-  const addActionHistory         = useStore((s) => s.addActionHistory);
-  const addIdempotencyHash       = useStore((s) => s.addIdempotencyHash);
-  const injectTimeout            = useStore((s) => s.injectTimeout);
-  const injectMalformedOutput    = useStore((s) => s.injectMalformedOutput);
-  const injectMissingContext     = useStore((s) => s.injectMissingContext);
-  const setInjectTimeout         = useStore((s) => s.setInjectTimeout);
+  const anthropicApiKey = useStore((s) => s.anthropicApiKey);
+  const cartesiaApiKey = useStore((s) => s.cartesiaApiKey);
+  const threshold = useStore((s) => s.threshold);
+  const open_obligations = useStore((s) => s.open_obligations);
+  const idempotencyHashes = useStore((s) => s.idempotencyHashes);
+  const actionHistory = useStore((s) => s.actionHistory);
+  const addObligations = useStore((s) => s.addObligations);
+  const resolveObligations = useStore((s) => s.resolveObligations);
+  const addActionHistory = useStore((s) => s.addActionHistory);
+  const addIdempotencyHash = useStore((s) => s.addIdempotencyHash);
+  const injectTimeout = useStore((s) => s.injectTimeout);
+  const injectMalformedOutput = useStore((s) => s.injectMalformedOutput);
+  const injectMissingContext = useStore((s) => s.injectMissingContext);
+  const setInjectTimeout = useStore((s) => s.setInjectTimeout);
   const setInjectMalformedOutput = useStore((s) => s.setInjectMalformedOutput);
-  const setInjectMissingContext  = useStore((s) => s.setInjectMissingContext);
+  const setInjectMissingContext = useStore((s) => s.setInjectMissingContext);
 
   // ---------------------------------------------------------------------------
   // Send turn → /api/decide SSE
   // ---------------------------------------------------------------------------
-  
+
   useEffect(() => {
     const handleScenario = (e: Event) => {
       const ce = e as CustomEvent<{ instruction: string; scenario: Scenario }>;
       const { instruction, scenario } = ce.detail;
-      
+
       const scenarioHistory: MessageEntry[] = (scenario.conversation_history || []).map((m, i: number) => ({
         id: `history-${i}`,
         role: m.role as "user" | "assistant",
         content: m.content
       }));
-      setMessages(scenarioHistory);
+      setMessages([
+        {
+          id: `scenario-${Date.now()}`,
+          role: "assistant", // Use assistant role to keep it left-aligned with contextual data
+          content: "",
+          scenario: scenario
+        },
+        ...scenarioHistory
+      ]);
       setInput(instruction);
-      
+
       setTimeout(() => {
         const btn = document.getElementById("chat-send-btn");
         if (btn && !btn.hasAttribute("disabled")) {
@@ -96,8 +106,8 @@ export function ChatPanel() {
 
     // Add user message immediately
     const userEntry: MessageEntry = {
-      id:      crypto.randomUUID(),
-      role:    "user",
+      id: crypto.randomUUID(),
+      role: "user",
       content: text,
     };
     setMessages((prev) => [...prev, userEntry]);
@@ -111,21 +121,21 @@ export function ChatPanel() {
 
     try {
       const res = await fetch("/api/decide", {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        signal:  ac.signal,
-        body:    JSON.stringify({
-          message:              text,
-          api_key:              anthropicApiKey,
+        signal: ac.signal,
+        body: JSON.stringify({
+          message: text,
+          api_key: anthropicApiKey,
           threshold,
           conversation_history: messages.map((m) => ({ role: m.role, content: m.content })),
-          open_obligations:     open_obligations,
-          idempotency_hashes:   Array.from(idempotencyHashes),
-          action_history:       actionHistory,
+          open_obligations: open_obligations,
+          idempotency_hashes: Array.from(idempotencyHashes),
+          action_history: actionHistory,
           inject: {
-            timeout:          injectTimeout,
+            timeout: injectTimeout,
             malformed_output: injectMalformedOutput,
-            missing_context:  injectMissingContext,
+            missing_context: injectMissingContext,
           }
         }),
       });
@@ -146,7 +156,7 @@ export function ChatPanel() {
       const turnDecisions: Decision[] = [];
       const turnActions: Record<string, unknown>[] = [];
       let turnClarifications: ClarificationSpec[] = [];
-      
+
       // M9 TTS state
       let ttsMode: "pending" | "none" | "clarify" | "first_sentence" | "full" = "pending";
       let sentenceBuffer = "";
@@ -156,9 +166,9 @@ export function ChatPanel() {
         ttsPlayerRef.current = new TTSPlayer(cartesiaApiKey);
       }
 
-      const reader  = res.body.getReader();
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer    = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
@@ -232,7 +242,7 @@ export function ChatPanel() {
                       ttsPlayerRef.current?.enqueueSentence(sentenceBuffer);
                       sentencesSpoken++;
                     }
-                    sentenceBuffer = ""; 
+                    sentenceBuffer = "";
                   }
                 }
               }
@@ -252,9 +262,9 @@ export function ChatPanel() {
       if (tokenAccumulator || turnDecisions.length > 0 || turnClarifications.length > 0) {
         setMessages((prev) => [
           ...prev,
-          { 
-            id: crypto.randomUUID(), 
-            role: "assistant", 
+          {
+            id: crypto.randomUUID(),
+            role: "assistant",
             content: tokenAccumulator,
             decisions: turnDecisions,
             actions: turnActions,
@@ -268,8 +278,8 @@ export function ChatPanel() {
         setMessages((prev) => [
           ...prev,
           {
-            id:      crypto.randomUUID(),
-            role:    "assistant",
+            id: crypto.randomUUID(),
+            role: "assistant",
             content: `An error occurred: ${(err as Error).message}`,
           },
         ]);
@@ -316,13 +326,14 @@ export function ChatPanel() {
         {messages.length === 0 && <WelcomePrompt />}
 
         {messages.map((msg) => (
-          <MessageBubble 
-            key={msg.id} 
-            role={msg.role} 
+          <MessageBubble
+            key={msg.id}
+            role={msg.role}
             content={msg.content}
             decisions={msg.decisions}
             actions={msg.actions}
             clarifications={msg.clarifications}
+            scenario={msg.scenario}
           />
         ))}
 
@@ -389,9 +400,9 @@ export function ChatPanel() {
               disabled={!input.trim()}
               className="shrink-0 font-mono text-xs px-3 py-1.5 rounded border transition-colors duration-150"
               style={{
-                color:           input.trim() ? "var(--bg-primary)" : "var(--text-muted)",
+                color: input.trim() ? "var(--bg-primary)" : "var(--text-muted)",
                 backgroundColor: input.trim() ? "var(--accent-copper)" : "transparent",
-                borderColor:     input.trim() ? "var(--accent-copper)" : "var(--border-subtle)",
+                borderColor: input.trim() ? "var(--accent-copper)" : "var(--border-subtle)",
               }}
               aria-label="Send message"
             >
@@ -413,7 +424,7 @@ export function ChatPanel() {
 // ---------------------------------------------------------------------------
 
 function MessageBubble({
-  role, content, streaming = false, decisions, actions, clarifications
+  role, content, streaming = false, decisions, actions, clarifications, scenario
 }: {
   role: "user" | "assistant";
   content: string;
@@ -421,39 +432,51 @@ function MessageBubble({
   decisions?: Decision[];
   actions?: Record<string, unknown>[];
   clarifications?: ClarificationSpec[];
+  scenario?: Scenario;
 }) {
   const isUser = role === "user";
+  const allSilent = decisions && decisions.length > 0 && decisions.every(d => d.verdict === "SILENT" || d.verdict === "SILENT_DUPE");
+  const showContent = !allSilent || streaming; // Show while streaming, hide after if silent
+
   return (
     <div className={`flex flex-col gap-2 w-full ${isUser ? "items-end" : "items-start"}`}>
-      <div
-        className="max-w-[85%] px-3 py-2 rounded-lg font-sans text-sm leading-relaxed"
-        style={{
-          backgroundColor: isUser ? "var(--accent-copper)" : "var(--bg-tertiary)",
-          color:           isUser ? "var(--bg-primary)"    : "var(--text-primary)",
-        }}
-      >
-        {content}
-        {streaming && (
-          <span
-            style={{
-              display: "inline-block",
-              width: "1px",
-              height: "0.9em",
-              backgroundColor: "currentColor",
-              marginLeft: "2px",
-              verticalAlign: "middle",
-              animation: "caret-blink 1.1s step-end infinite",
-            }}
-          />
-        )}
-      </div>
+      {scenario && (
+        <div className="w-full max-w-[90%] mb-2">
+          <ScenarioSlate scenario={scenario} />
+        </div>
+      )}
+
+      {content && showContent && (
+        <div
+          className="max-w-[85%] px-3 py-2 rounded-lg font-sans text-sm leading-relaxed"
+          style={{
+            backgroundColor: isUser ? "var(--accent-copper)" : "var(--bg-tertiary)",
+            color: isUser ? "var(--bg-primary)" : "var(--text-primary)",
+          }}
+        >
+          {content}
+          {streaming && (
+            <span
+              style={{
+                display: "inline-block",
+                width: "1px",
+                height: "0.9em",
+                backgroundColor: "currentColor",
+                marginLeft: "2px",
+                verticalAlign: "middle",
+                animation: "caret-blink 1.1s step-end infinite",
+              }}
+            />
+          )}
+        </div>
+      )}
       {!isUser && (
         <div className={`flex flex-col gap-2 w-full mt-1 ${isUser ? "items-end" : "items-start"}`}>
           {decisions?.map((d, i) => (
-             <OutcomeCard key={`d-${i}`} decision={d} action={actions?.[i]} />
+            <OutcomeCard key={`d-${i}`} decision={d} action={actions?.[i]} />
           ))}
           {clarifications?.map((c, i) => (
-             <OutcomeCard key={`c-${i}`} clarification={c} />
+            <OutcomeCard key={`c-${i}`} clarification={c} />
           ))}
         </div>
       )}
